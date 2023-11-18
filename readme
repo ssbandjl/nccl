@@ -131,3 +131,13 @@ static int collNetSupport(struct ncclComm* comm) { return comm->ncclCollNet != n
 
 
 
+
+
+struct ncclTransport collNetTransport = {
+  "COL",
+  canConnect,
+  { sendSetup, sendConnect, sendFree, NULL, sendProxySetup, sendProxyConnect, sendProxyFree, sendProxyProgress },
+  { recvSetup, recvConnect, recvFree, NULL, recvProxySetup, recvProxyConnect, recvProxyFree, recvProxyProgress }
+};
+
+
