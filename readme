@@ -1,0 +1,133 @@
+git repo: https://github.com/ssbandjl/nccl.git
+
+
+rdma:
+ncclResult_t ncclIbCreateQp
+    qpInitAttr.qp_type = IBV_QPT_RC
+    wrap_ibv_modify_qp
+
+
+ncclResult_t ncclIbIsend
+    NCCLCHECK(ncclIbMultiSend(comm, slot))
+ncclResult_t ncclIbMultiSend
+    wr->opcode = IBV_WR_RDMA_WRITE
+    lastWr->opcode = IBV_WR_RDMA_WRITE_WITH_IMM
+    NCCLCHECK(wrap_ibv_post_send(comm->qps[comm->qpIndex], comm->wrs, &bad_wr))
+        qp->context->ops.post_send(qp, wr, bad_wr)
+
+main:
+net_type:
+ncclNet_t* ncclNets[3] = { nullptr, &ncclNetIb, &ncclNetSocket };
+src/transport/net_ib.cc
+ncclNet_t ncclNetIb = {
+  "IB",
+  ncclIbInit,
+  ncclIbDevices,
+  ncclIbGetProperties,
+  ncclIbListen,
+  ncclIbConnect,
+  ncclIbAccept,
+  ncclIbRegMr,
+  ncclIbRegMrDmaBuf,
+  ncclIbDeregMr,
+  ncclIbIsend,
+  ncclIbIrecv,
+  ncclIbIflush,
+  ncclIbTest,
+  ncclIbCloseSend,
+  ncclIbCloseRecv,
+  ncclIbCloseListen
+};
+
+
+
+网络支持的接口:
+typedef struct {
+  // Name of the network (mainly for logs)
+  const char* name;
+  // Initialize the network.
+  ncclResult_t (*init)(ncclDebugLogger_t logFunction);
+  // Return the number of adapters.
+  ncclResult_t (*devices)(int* ndev);
+  // Get various device properties.
+  ncclResult_t (*getProperties)(int dev, ncclNetProperties_v6_t* props);
+  // Create a receiving object and provide a handle to connect to it. The
+  // handle can be up to NCCL_NET_HANDLE_MAXSIZE bytes and will be exchanged
+  // between ranks to create a connection.
+  ncclResult_t (*listen)(int dev, void* handle, void** listenComm);
+  // Connect to a handle and return a sending comm object for that peer.
+  // This call must not block for the connection to be established, and instead
+  // should return successfully with sendComm == NULL with the expectation that
+  // it will be called again until sendComm != NULL.
+  ncclResult_t (*connect)(int dev, void* handle, void** sendComm);
+  // Finalize connection establishment after remote peer has called connect.
+  // This call must not block for the connection to be established, and instead
+  // should return successfully with recvComm == NULL with the expectation that
+  // it will be called again until recvComm != NULL.
+  ncclResult_t (*accept)(void* listenComm, void** recvComm);
+  // Register/Deregister memory. Comm can be either a sendComm or a recvComm.
+  // Type is either NCCL_PTR_HOST or NCCL_PTR_CUDA.
+  ncclResult_t (*regMr)(void* comm, void* data, int size, int type, void** mhandle);
+  /* DMA-BUF support */
+  ncclResult_t (*regMrDmaBuf)(void* comm, void* data, size_t size, int type, uint64_t offset, int fd, void** mhandle);
+  ncclResult_t (*deregMr)(void* comm, void* mhandle);
+  // Asynchronous send to a peer.
+  // May return request == NULL if the call cannot be performed (or would block)
+  ncclResult_t (*isend)(void* sendComm, void* data, int size, int tag, void* mhandle, void** request);
+  // Asynchronous recv from a peer.
+  // May return request == NULL if the call cannot be performed (or would block)
+  ncclResult_t (*irecv)(void* recvComm, int n, void** data, int* sizes, int* tags, void** mhandles, void** request);
+  // Perform a flush/fence to make sure all data received with NCCL_PTR_CUDA is
+  // visible to the GPU
+  ncclResult_t (*iflush)(void* recvComm, int n, void** data, int* sizes, void** mhandles, void** request);
+  // Test whether a request is complete. If size is not NULL, it returns the
+  // number of bytes sent/received.
+  ncclResult_t (*test)(void* request, int* done, int* sizes);
+  // Close and free send/recv comm objects
+  ncclResult_t (*closeSend)(void* sendComm);
+  ncclResult_t (*closeRecv)(void* recvComm);
+  ncclResult_t (*closeListen)(void* listenComm);
+} ncclNet_v6_t;
+
+
+ncclIbRegMr -> 内存注册
+    ncclResult_t ncclIbRegMrDmaBuf
+        flags = IBV_ACCESS_LOCAL_WRITE|IBV_ACCESS_REMOTE_WRITE|IBV_ACCESS_REMOTE_READ
+        NCCLCHECKGOTO(wrap_ibv_reg_mr_iova2(&mr, verbs->pd, (void*)addr, pages*pageSize, addr, flags), res, returning)
+        NCCLCHECKGOTO(wrap_ibv_reg_mr(&mr, verbs->pd, (void*)addr, pages*pageSize, flags), res, returning)
+
+
+下刷:
+ncclResult_t ncclIbIflush(void* recvComm, int n, void** data, int* sizes, void** mhandles, void** request) {
+    NCCLCHECK(wrap_ibv_poll_cq(r->verbs->cq, 4, wcs, &wrDone))
+
+
+
+ncclNet_v4_as_v6_init
+
+
+collNetRegMr
+
+对外接口: src/include/coll_net.h
+// Translation to external API
+static const char* collNetName(struct ncclComm* comm) { return comm->ncclCollNet->name; }
+static ncclResult_t collNetDevices(struct ncclComm* comm, int* ndev) { NCCLCHECK(comm->ncclCollNet->devices(ndev)); return ncclSuccess; }
+static ncclResult_t collNetGetProperties(struct ncclComm* comm, int dev, ncclNetProperties_t* props) { NCCLCHECK(comm->ncclCollNet->getProperties(dev, props)); return ncclSuccess; }
+static ncclResult_t collNetListen(struct ncclComm* comm, int dev, void* handle, void** listenComm) { NCCLCHECK(comm->ncclCollNet->listen(dev, handle, listenComm)); return ncclSuccess; }
+static ncclResult_t collNetConnect(struct ncclComm* comm, void* handles[], int nranks, int rank, void* listenComm, void** collComm) { NCCLCHECK(comm->ncclCollNet->connect(handles, nranks, rank, listenComm, collComm)); return ncclSuccess; }
+static ncclResult_t collNetReduceSupport(struct ncclComm* comm, ncclDataType_t dataType, ncclRedOp_t redOp, int* supported) { NCCLCHECK(comm->ncclCollNet->reduceSupport(dataType, redOp, supported)); return ncclSuccess; }
+static ncclResult_t collNetRegMr(struct ncclComm* comm, void* collComm, void* data, int size, int type, void** mhandle) { NCCLCHECK(comm->ncclCollNet->regMr(collComm, data, size, type, mhandle)); return ncclSuccess; }
+/* DMA-BUF support */
+static ncclResult_t collNetRegMrDmaBuf(struct ncclComm* comm, void* collComm, void* data, int size, int type, uint64_t offset, int fd, void** mhandle) { NCCLCHECK(comm->ncclCollNet->regMrDmaBuf(collComm, data, size, type, offset, fd, mhandle)); return ncclSuccess; }
+static ncclResult_t collNetDeregMr(struct ncclComm* comm, void* collComm, void* mhandle) { NCCLCHECK(comm->ncclCollNet->deregMr(collComm, mhandle)); return ncclSuccess; }
+static ncclResult_t collNetIallreduce(struct ncclComm* comm, void* collComm, void* sendData, void* recvData, int count, ncclDataType_t dataType, ncclRedOp_t redOp, void* sendMhandle, void* recvMhandle,  void** request) {
+  NCCLCHECK(comm->ncclCollNet->iallreduce(collComm, sendData, recvData, count, dataType, redOp, sendMhandle, recvMhandle, request)); return ncclSuccess; }
+static ncclResult_t collNetIflush(struct ncclComm* comm, void* collComm, void* data, int size, void* mhandle, void** request) { NCCLCHECK(comm->ncclCollNet->iflush(collComm, data, size, mhandle, request)); return ncclSuccess; }
+static ncclResult_t collNetTest(struct ncclComm* comm, void* request, int* done, int* size) { NCCLCHECK(comm->ncclCollNet->test(request, done, size)); return ncclSuccess; }
+static ncclResult_t collNetCloseColl(struct ncclComm* comm, void* collComm) { NCCLCHECK(comm->ncclCollNet->closeColl(collComm)); return ncclSuccess; }
+static ncclResult_t collNetCloseListen(struct ncclComm* comm, void* listenComm) { NCCLCHECK(comm->ncclCollNet->closeListen(listenComm)); return ncclSuccess; }
+
+static int collNetSupport(struct ncclComm* comm) { return comm->ncclCollNet != nullptr ? 1 : 0; }
+
+
+
