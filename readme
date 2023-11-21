@@ -4,16 +4,27 @@ git repo: https://github.com/ssbandjl/nccl.git
 rdma:
 ncclResult_t ncclIbCreateQp
     qpInitAttr.qp_type = IBV_QPT_RC
+    qpInitAttr.cap.max_send_wr = 2*MAX_REQUESTS -> 128
+    qpInitAttr.cap.max_recv_wr = MAX_REQUESTS -> 64
     wrap_ibv_modify_qp
 
 
 ncclResult_t ncclIbIsend
     NCCLCHECK(ncclIbMultiSend(comm, slot))
 ncclResult_t ncclIbMultiSend
-    wr->opcode = IBV_WR_RDMA_WRITE
+    for (int r=0; r<nreqs; r++)
+        struct ibv_sge* sge = comm->sges+r
+        wr->opcode = IBV_WR_RDMA_WRITE
+        wr->wr.rdma.remote_addr = slots[r].addr
+        wr->next = wr+1
+        wr_id += (reqs[r] - comm->verbs.reqs) << (r*8)
+    immData |= (reqs[r]->send.size ? 1 : 0) << r -> 将数据大小写入立即数。 多个发送时，只写0或1作为size来表示是否有数据发送或接收
+    lastWr->wr_id = wr_id
     lastWr->opcode = IBV_WR_RDMA_WRITE_WITH_IMM
+    lastWr->send_flags = IBV_SEND_SIGNALED
     NCCLCHECK(wrap_ibv_post_send(comm->qps[comm->qpIndex], comm->wrs, &bad_wr))
-        qp->context->ops.post_send(qp, wr, bad_wr)
+        qp->context->ops.post_send(qp, wr, bad_wr) -> ibv_post_send
+
 
 main:
 net_type:
@@ -140,4 +151,120 @@ struct ncclTransport collNetTransport = {
   { recvSetup, recvConnect, recvFree, NULL, recvProxySetup, recvProxyConnect, recvProxyFree, recvProxyProgress }
 };
 
+
+
+对齐和常用数据库:
+#define DIVUP(x, y) \
+    (((x)+(y)-1)/(y))
+
+#define ROUNDUP(x, y) \
+    (DIVUP((x), (y))*(y))
+
+#define ALIGN_POWER(x, y) \
+    ((x) > (y) ? ROUNDUP(x, y) : ((y)/((y)/(x))))
+
+#define ALIGN_SIZE(size, align) \
+  size = ((size + (align) - 1) / (align)) * (align);
+
+#if !__CUDA_ARCH__
+  #ifndef __host__
+    #define __host__
+  #endif
+  #ifndef __device__
+    #define __device__
+  #endif
+#endif
+
+template<typename X, typename Y, typename Z = decltype(X()+Y())>
+__host__ __device__ constexpr Z divUp(X x, Y y) {
+  return (x+y-1)/y;
+}
+
+template<typename X, typename Y, typename Z = decltype(X()+Y())>
+__host__ __device__ constexpr Z roundUp(X x, Y y) {
+  return (x+y-1) - (x+y-1)%y;
+}
+
+// assumes second argument is a power of 2
+template<typename X, typename Z = decltype(X()+int())>
+__host__ __device__ constexpr Z alignUp(X x, int a) {
+  return (x+a-1) & Z(-a);
+}
+
+
+
+公共状态:
+enum ncclIbCommState {
+  ncclIbCommStateStart = 0,
+  ncclIbCommStateConnect = 1,
+  ncclIbCommStateAccept = 3,
+  ncclIbCommStateSend = 4,
+  ncclIbCommStateRecv = 5,
+  ncclIbCommStateConnecting = 6,
+  ncclIbCommStateConnected = 7,
+  ncclIbCommStatePendingReady = 8,
+};
+
+
+
+ncclResult_t ncclIbConnect(int dev, void* opaqueHandle, void** sendComm)
+    if (stage->state == ncclIbCommStateSend)       goto ib_send;
+    NCCLCHECK(ncclIbInitVerbs(dev, ctx, &comm->verbs))
+
+
+
+
+init()
+编译时加载:
+ncclResult_t wrap_ibv_symbols(void) {
+  pthread_once(&initOnceControl,
+               [](){ initResult = buildIbvSymbols(&ibvSymbols); });
+  return initResult;
+}
+ncclResult_t buildIbvSymbols(struct ncclIbvSymbols* ibvSymbols)
+    ibvhandle=dlopen("libibverbs.so", RTLD_NOW)
+
+
+ibv接口, verbs
+LOAD_SYM(ibvhandle, "ibv_get_device_list", ibvSymbols->ibv_internal_get_device_list);
+LOAD_SYM(ibvhandle, "ibv_free_device_list", ibvSymbols->ibv_internal_free_device_list);
+LOAD_SYM(ibvhandle, "ibv_get_device_name", ibvSymbols->ibv_internal_get_device_name);
+LOAD_SYM(ibvhandle, "ibv_open_device", ibvSymbols->ibv_internal_open_device);
+LOAD_SYM(ibvhandle, "ibv_close_device", ibvSymbols->ibv_internal_close_device);
+LOAD_SYM(ibvhandle, "ibv_get_async_event", ibvSymbols->ibv_internal_get_async_event);
+LOAD_SYM(ibvhandle, "ibv_ack_async_event", ibvSymbols->ibv_internal_ack_async_event);
+LOAD_SYM(ibvhandle, "ibv_query_device", ibvSymbols->ibv_internal_query_device);
+LOAD_SYM(ibvhandle, "ibv_query_port", ibvSymbols->ibv_internal_query_port);
+LOAD_SYM(ibvhandle, "ibv_query_gid", ibvSymbols->ibv_internal_query_gid);
+LOAD_SYM(ibvhandle, "ibv_query_qp", ibvSymbols->ibv_internal_query_qp);
+LOAD_SYM(ibvhandle, "ibv_alloc_pd", ibvSymbols->ibv_internal_alloc_pd);
+LOAD_SYM(ibvhandle, "ibv_dealloc_pd", ibvSymbols->ibv_internal_dealloc_pd);
+LOAD_SYM(ibvhandle, "ibv_reg_mr", ibvSymbols->ibv_internal_reg_mr);
+// Cherry-pick the ibv_reg_mr_iova2 API from IBVERBS 1.8
+LOAD_SYM_VERSION(ibvhandle, "ibv_reg_mr_iova2", ibvSymbols->ibv_internal_reg_mr_iova2, "IBVERBS_1.8");
+// Cherry-pick the ibv_reg_dmabuf_mr API from IBVERBS 1.12
+LOAD_SYM_VERSION(ibvhandle, "ibv_reg_dmabuf_mr", ibvSymbols->ibv_internal_reg_dmabuf_mr, "IBVERBS_1.12");
+LOAD_SYM(ibvhandle, "ibv_dereg_mr", ibvSymbols->ibv_internal_dereg_mr);
+LOAD_SYM(ibvhandle, "ibv_create_cq", ibvSymbols->ibv_internal_create_cq);
+LOAD_SYM(ibvhandle, "ibv_destroy_cq", ibvSymbols->ibv_internal_destroy_cq);
+LOAD_SYM(ibvhandle, "ibv_create_qp", ibvSymbols->ibv_internal_create_qp);
+LOAD_SYM(ibvhandle, "ibv_modify_qp", ibvSymbols->ibv_internal_modify_qp);
+LOAD_SYM(ibvhandle, "ibv_destroy_qp", ibvSymbols->ibv_internal_destroy_qp);
+LOAD_SYM(ibvhandle, "ibv_fork_init", ibvSymbols->ibv_internal_fork_init); <- wrap_ibv_fork_init
+LOAD_SYM(ibvhandle, "ibv_event_type_str", ibvSymbols->ibv_internal_event_type_str);
+
+带宽:
+static int ibvSpeeds[] = {
+  2500,  /* SDR */
+  5000,  /* DDR */
+  10000, /* QDR */
+  10000, /* QDR */
+  14000, /* FDR */
+  25000, /* EDR */
+  50000, /* HDR */
+  100000 /* NDR */ };
+
+
+计算带宽:
+ncclIbDevs[ncclNIbDevs].speed = ncclIbSpeed(portAttr.active_speed) * ncclIbWidth(portAttr.active_width);
 
