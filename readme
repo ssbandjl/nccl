@@ -268,3 +268,9 @@ static int ibvSpeeds[] = {
 计算带宽:
 ncclIbDevs[ncclNIbDevs].speed = ncclIbSpeed(portAttr.active_speed) * ncclIbWidth(portAttr.active_width);
 
+
+IB异步主线程:
+static void* ncclIbAsyncThreadMain(void* args)
+    wrap_ibv_event_type_str(&str, event.event_type)) -> 事件转字符串
+    wrap_ibv_ack_async_event(&event)
+    
