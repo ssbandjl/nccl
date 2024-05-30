@@ -85,13 +85,14 @@ static inline ncclResult_t ncclCuMemAlloc(void **ptr, CUmemGenericAllocationHand
   CUmemAllocationProp prop = {};
   CUmemAccessDesc accessDesc = {};
   CUmemGenericAllocationHandle handle;
+  CUmemAllocationHandleType type = ncclCuMemHandleType;
   int cudaDev;
   int flag = 0;
   CUDACHECK(cudaGetDevice(&cudaDev));
   CUCHECK(cuDeviceGet(&currentDev, cudaDev));
   prop.type = CU_MEM_ALLOCATION_TYPE_PINNED;
   prop.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
-  prop.requestedHandleTypes = NCCL_P2P_HANDLE_TYPE; // So it can be exported
+  prop.requestedHandleTypes = type;
   prop.location.id = currentDev;
   // Query device to see if RDMA support is available
   CUCHECK(cuDeviceGetAttribute(&flag, CU_DEVICE_ATTRIBUTE_GPU_DIRECT_RDMA_SUPPORTED, currentDev));
@@ -101,7 +102,7 @@ static inline ncclResult_t ncclCuMemAlloc(void **ptr, CUmemGenericAllocationHand
   /* Allocate the physical memory on the device */
   CUCHECK(cuMemCreate(&handle, size, &prop, 0));
   /* Reserve a virtual address range */
-  CUCHECK(cuMemAddressReserve((CUdeviceptr *)ptr, size, 0, 0, 0));
+  CUCHECK(cuMemAddressReserve((CUdeviceptr *)ptr, size, granularity, 0, 0));
   /* Map the virtual address range to the physical allocation */
   CUCHECK(cuMemMap((CUdeviceptr)*ptr, size, 0, handle, 0));
   /* Now allow RW access to the newly mapped memory */

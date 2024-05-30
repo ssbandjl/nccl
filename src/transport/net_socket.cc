@@ -96,11 +96,14 @@ ncclResult_t ncclNetSocketGetProperties(int dev, ncclNetProperties_t* props) {
   props->pciPath = ncclNetSocketDevs[dev].pciPath;
   props->guid = dev;
   props->ptrSupport = NCCL_PTR_HOST;
+  props->regIsGlobal = 0;
   NCCLCHECK(ncclNetSocketGetSpeed(props->name, &props->speed));
   props->latency = 0; // Not set
   props->port = 0;
   props->maxComms = 65536;
   props->maxRecvs = 1;
+  props->netDeviceType    = NCCL_NET_DEVICE_HOST;
+  props->netDeviceVersion = NCCL_NET_DEVICE_INVALID_VERSION;
   return ncclSuccess;
 }
 
@@ -301,7 +304,7 @@ ncclResult_t ncclNetSocketListen(int dev, void* opaqueHandle, void** listenComm)
   return ncclSuccess;
 }
 
-ncclResult_t ncclNetSocketConnect(int dev, void* opaqueHandle, void** sendComm) {
+ncclResult_t ncclNetSocketConnect(int dev, void* opaqueHandle, void** sendComm, ncclNetDeviceHandle_t** /*sendDevComm*/) {
   if (dev < 0 || dev >= ncclNetIfs) { // data transfer socket is based on specified dev
     return ncclInternalError;
   }
@@ -346,7 +349,7 @@ socket_send:
   return ncclSuccess;
 }
 
-ncclResult_t ncclNetSocketAccept(void* listenComm, void** recvComm) {
+ncclResult_t ncclNetSocketAccept(void* listenComm, void** recvComm, ncclNetDeviceHandle_t** /*recvDevComm*/) {
   struct ncclNetSocketListenComm* lComm = (struct ncclNetSocketListenComm*)listenComm;
   struct ncclNetSocketCommStage* stage = &lComm->stage;
   struct ncclNetSocketComm* rComm = stage->comm;
@@ -532,7 +535,7 @@ ncclResult_t ncclNetSocketTest(void* request, int* done, int* size) {
   return ncclSuccess;
 }
 
-ncclResult_t ncclNetSocketRegMr(void* comm, void* data, int size, int type, void** mhandle) {
+ncclResult_t ncclNetSocketRegMr(void* comm, void* data, size_t size, int type, void** mhandle) {
   return (type != NCCL_PTR_HOST) ? ncclInternalError : ncclSuccess;
 }
 ncclResult_t ncclNetSocketDeregMr(void* comm, void* mhandle) { return ncclSuccess; }
@@ -609,5 +612,7 @@ ncclNet_t ncclNetSocket = {
   ncclNetSocketTest,
   ncclNetSocketClose,
   ncclNetSocketClose,
-  ncclNetSocketCloseListen
+  ncclNetSocketCloseListen,
+  NULL /* getDeviceMr */,
+  NULL /* irecvConsumed */
 };

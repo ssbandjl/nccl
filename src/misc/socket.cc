@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <ifaddrs.h>
 #include <net/if.h>
+#include "param.h"
 
 static ncclResult_t socketProgressOpt(int op, struct ncclSocket* sock, void* ptr, int size, int* offset, int block, int* closed) {
   int bytes = 0;
@@ -33,7 +34,7 @@ static ncclResult_t socketProgressOpt(int op, struct ncclSocket* sock, void* ptr
       }
     }
     (*offset) += bytes;
-    if (sock->abortFlag && *sock->abortFlag != 0) {
+    if (sock->abortFlag && __atomic_load_n(sock->abortFlag, __ATOMIC_RELAXED)) {
       INFO(NCCL_NET, "socketProgressOpt: abort called");
       return ncclInternalError;
     }
@@ -84,7 +85,7 @@ static uint16_t socketToPort(union ncclSocketAddress *addr) {
 /* Allow the user to force the IPv4/IPv6 interface selection */
 static int envSocketFamily(void) {
   int family = -1; // Family selection is not forced, will use first one found
-  char* env = getenv("NCCL_SOCKET_FAMILY");
+  const char* env = ncclGetEnv("NCCL_SOCKET_FAMILY");
   if (env == NULL)
     return family;
 
@@ -325,7 +326,7 @@ int ncclFindInterfaces(char* ifNames, union ncclSocketAddress *ifAddrs, int ifNa
   // Allow user to force the INET socket family selection
   int sock_family = envSocketFamily();
   // User specified interface
-  char* env = getenv("NCCL_SOCKET_IFNAME");
+  const char* env = ncclGetEnv("NCCL_SOCKET_IFNAME");
   if (env && strlen(env) > 1) {
     INFO(NCCL_ENV, "NCCL_SOCKET_IFNAME set by environment to %s", env);
     // Specified by user : find or fail
@@ -337,10 +338,10 @@ int ncclFindInterfaces(char* ifNames, union ncclSocketAddress *ifAddrs, int ifNa
     nIfs = findInterfaces("ib", ifNames, ifAddrs, sock_family, ifNameMaxSize, maxIfs);
     // else see if we can get some hint from COMM ID
     if (nIfs == 0) {
-      char* commId = getenv("NCCL_COMM_ID");
+      const char* commId = ncclGetEnv("NCCL_COMM_ID");
       if (commId && strlen(commId) > 1) {
-	INFO(NCCL_ENV, "NCCL_COMM_ID set by environment to %s", commId);
-	// Try to find interface that is in the same subnet as the IP in comm id
+        INFO(NCCL_ENV, "NCCL_COMM_ID set by environment to %s", commId);
+        // Try to find interface that is in the same subnet as the IP in comm id
         union ncclSocketAddress idAddr;
         ncclSocketGetAddrFromString(&idAddr, commId);
         nIfs = ncclFindInterfaceMatchSubnet(ifNames, ifAddrs, &idAddr, ifNameMaxSize, maxIfs);
@@ -528,6 +529,8 @@ static ncclResult_t socketPollConnect(struct ncclSocket* sock) {
     sock->state = ncclSocketStateConnecting;
   } else if (ret != EINPROGRESS) {
     sock->state = ncclSocketStateError;
+    char line[SOCKET_NAME_MAXLEN+1];
+    WARN("socketPollConnect: Connect to %s returned %d(%s) errno %d(%s)", ncclSocketToString(&sock->addr, line), ret, strerror(ret), errno, strerror(errno));
     return ncclSystemError;
   }
   return ncclSuccess;
@@ -617,12 +620,12 @@ ncclResult_t ncclSocketConnect(struct ncclSocket* sock) {
   do {
     NCCLCHECK(socketProgressState(sock));
   } while (sock->asyncFlag == 0 &&
-      (sock->abortFlag == NULL || *sock->abortFlag == 0) &&
+      (sock->abortFlag == NULL || __atomic_load_n(sock->abortFlag, __ATOMIC_RELAXED) == 0) &&
       (sock->state == ncclSocketStateConnecting ||
        sock->state == ncclSocketStateConnectPolling ||
        sock->state == ncclSocketStateConnected));
 
-  if (sock->abortFlag && *sock->abortFlag != 0) return ncclInternalError;
+  if (sock->abortFlag && __atomic_load_n(sock->abortFlag, __ATOMIC_RELAXED)) return ncclInternalError;
 
   switch (sock->state) {
     case ncclSocketStateConnecting:
@@ -664,11 +667,11 @@ ncclResult_t ncclSocketAccept(struct ncclSocket* sock, struct ncclSocket* listen
   do {
     NCCLCHECKGOTO(socketProgressState(sock), ret, exit);
   } while (sock->asyncFlag == 0 &&
-      (sock->abortFlag == NULL || *sock->abortFlag == 0) &&
+      (sock->abortFlag == NULL || __atomic_load_n(sock->abortFlag, __ATOMIC_RELAXED) == 0) &&
       (sock->state == ncclSocketStateAccepting ||
        sock->state == ncclSocketStateAccepted));
 
-  if (sock->abortFlag && *sock->abortFlag != 0) return ncclInternalError;
+  if (sock->abortFlag && __atomic_load_n(sock->abortFlag, __ATOMIC_RELAXED)) return ncclInternalError;
 
   switch (sock->state) {
     case ncclSocketStateAccepting:
@@ -786,6 +789,24 @@ ncclResult_t ncclSocketRecv(struct ncclSocket* sock, void* ptr, int size) {
   NCCLCHECK(socketWait(NCCL_SOCKET_RECV, sock, ptr, size, &offset));
   return ncclSuccess;
 }
+
+ncclResult_t ncclSocketSendRecv(struct ncclSocket* sendSock, void* sendPtr, int sendSize, struct ncclSocket* recvSock, void* recvPtr, int recvSize) {
+  int sendOffset = 0, recvOffset = 0;
+  if (sendSock == NULL || recvSock == NULL) {
+    WARN("ncclSocketSendRecv: invalid socket %p/%p", sendSock, recvSock);
+    return ncclInternalError;
+  }
+  if (sendSock->state != ncclSocketStateReady || recvSock->state != ncclSocketStateReady) {
+    WARN("ncclSocketSendRecv: socket state (%d/%d) is not ready", sendSock->state, recvSock->state);
+    return ncclInternalError;
+  }
+  while (sendOffset < sendSize || recvOffset < recvSize) {
+    if (sendOffset < sendSize) NCCLCHECK(socketProgress(NCCL_SOCKET_SEND, sendSock, sendPtr, sendSize, &sendOffset));
+    if (recvOffset < recvSize) NCCLCHECK(socketProgress(NCCL_SOCKET_RECV, recvSock, recvPtr, recvSize, &recvOffset));
+  }
+  return ncclSuccess;
+}
+
 
 // Receive or detect connection closed
 ncclResult_t ncclSocketTryRecv(struct ncclSocket* sock, void* ptr, int size, int* closed, bool blocking) {

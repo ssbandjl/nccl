@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <sched.h>
+#include <algorithm>
 #include <new>
 
 int ncclCudaCompCap();
@@ -28,6 +29,11 @@ uint64_t getHash(const char* string, int n);
 uint64_t getHostHash();
 uint64_t getPidHash();
 ncclResult_t getRandomData(void* buffer, size_t bytes);
+
+const char* ncclOpToString(ncclRedOp_t op);
+const char* ncclDatatypeToString(ncclDataType_t type);
+const char* ncclAlgoToString(int algo);
+const char* ncclProtoToString(int proto);
 
 struct netIf {
   char prefix[64];
@@ -259,11 +265,6 @@ struct ncclMemoryPool {
   struct Cell {
     Cell *next;
   };
-  template<int Size, int Align>
-  union CellSized {
-    Cell cell;
-    alignas(Align) char space[Size];
-  };
   struct Cell* head;
   struct Cell* tail; // meaningful only when head != nullptr
 };
@@ -275,14 +276,15 @@ inline void ncclMemoryPoolConstruct(struct ncclMemoryPool* me) {
 template<typename T>
 inline T* ncclMemoryPoolAlloc(struct ncclMemoryPool* me, struct ncclMemoryStack* backing) {
   using Cell = ncclMemoryPool::Cell;
-  using CellSized = ncclMemoryPool::CellSized<sizeof(T), alignof(T)>;
   Cell* cell;
   if (__builtin_expect(me->head != nullptr, true)) {
     cell = me->head;
     me->head = cell->next;
   } else {
     // Use the internal allocate() since it doesn't memset to 0 yet.
-    cell = (Cell*)ncclMemoryStack::allocate(backing, sizeof(CellSized), alignof(CellSized));
+    size_t cellSize = std::max(sizeof(Cell), sizeof(T));
+    size_t cellAlign = std::max(alignof(Cell), alignof(T));
+    cell = (Cell*)ncclMemoryStack::allocate(backing, cellSize, cellAlign);
   }
   memset(cell, 0, sizeof(T));
   return reinterpret_cast<T*>(cell);
@@ -350,6 +352,32 @@ inline T* ncclIntruQueueDequeue(ncclIntruQueue<T,next> *me) {
 }
 
 template<typename T, T *T::*next>
+inline bool ncclIntruQueueDelete(ncclIntruQueue<T,next> *me, T *x) {
+  T *prev = nullptr;
+  T *cur = me->head;
+  bool found = false;
+
+  while (cur) {
+    if (cur == x) {
+      found = true;
+      break;
+    }
+    prev = cur;
+    cur = cur->*next;
+  }
+
+  if (found) {
+    if (prev == nullptr)
+      me->head = cur->*next;
+    else
+      prev->*next = cur->*next;
+    if (cur == me->tail)
+      me->tail = prev;
+  }
+  return found;
+}
+
+template<typename T, T *T::*next>
 inline T* ncclIntruQueueTryDequeue(ncclIntruQueue<T,next> *me) {
   T *ans = me->head;
   if (ans != nullptr) {
@@ -368,6 +396,36 @@ void ncclIntruQueueFreeAll(ncclIntruQueue<T,next> *me, ncclMemoryPool *pool) {
     T *tmp = head->*next;
     ncclMemoryPoolFree(pool, tmp);
     head = tmp;
+  }
+}
+
+/* cmp function determines the sequence of objects in the queue. If cmp returns value >= 0, it means a > b,
+ * and we should put a before b; otherwise, b should be put ahead of a. */
+template<typename T, T *T::*next>
+inline void ncclIntruQueueSortEnqueue(ncclIntruQueue<T,next> *me, T *x, int (*cmp)(T *a, T *b)) {
+  T *cur = me->head;
+  T *prev = NULL;
+
+  if (cur == NULL) {
+    x->*next = nullptr;
+    me->tail = me->head = x;
+  } else {
+    while (cur) {
+      if (cmp(cur, x) > 0) {
+        prev = cur;
+        cur = cur->next;
+      } else {
+        break;
+      }
+    }
+
+    x->*next = cur;
+    if (prev) {
+      prev->*next = x;
+      if (cur == NULL) me->tail = x;
+    } else {
+      me->head = x;
+    }
   }
 }
 

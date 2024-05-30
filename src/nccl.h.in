@@ -78,6 +78,15 @@ typedef struct ncclConfig_v21700 {
   NCCL_CONFIG_UNDEF_INT                     /* splitShare */            \
 }
 
+/* NCCL malloc and free function for all types of NCCL optimizations
+ * (e.g. user buffer registration). The actual allocated size might
+ * be larger than requested due to granularity requirement. */
+ncclResult_t  ncclMemAlloc(void** ptr, size_t size);
+ncclResult_t pncclMemAlloc(void** ptr, size_t size);
+
+ncclResult_t  ncclMemFree(void *ptr);
+ncclResult_t pncclMemFree(void *ptr);
+
 /* Return the NCCL_VERSION_CODE of the NCCL library in the supplied integer.
  * This integer is coded with the MAJOR, MINOR and PATCH level of the
  * NCCL library
@@ -145,9 +154,7 @@ ncclResult_t pncclCommSplit(ncclComm_t comm, int color, int key, ncclComm_t *new
 const char*  ncclGetErrorString(ncclResult_t result);
 const char* pncclGetErrorString(ncclResult_t result);
 
-/* Returns a human-readable message of the last error that occurred.
- * comm is currently unused and can be set to NULL
- */
+/* Returns a human-readable message of the last error that occurred. */
 const char*  ncclGetLastError(ncclComm_t comm);
 const char* pncclGetLastError(ncclComm_t comm);
 
@@ -166,6 +173,14 @@ ncclResult_t pncclCommCuDevice(const ncclComm_t comm, int* device);
 /* Returns the user-ordered "rank" associated with the communicator. */
 ncclResult_t  ncclCommUserRank(const ncclComm_t comm, int* rank);
 ncclResult_t pncclCommUserRank(const ncclComm_t comm, int* rank);
+
+/* Register CUDA buffer for zero-copy operation */
+ncclResult_t  ncclCommRegister(const ncclComm_t comm, void* buff, size_t size, void** handle);
+ncclResult_t pncclCommRegister(const ncclComm_t comm, void* buff, size_t size, void** handle);
+
+/* Deregister CUDA buffer */
+ncclResult_t  ncclCommDeregister(const ncclComm_t comm, void* handle);
+ncclResult_t pncclCommDeregister(const ncclComm_t comm, void* handle);
 
 /* Reduction operation selector */
 typedef enum { ncclNumOps_dummy = 5 } ncclRedOp_dummy_t;
