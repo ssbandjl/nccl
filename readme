@@ -1,4 +1,9 @@
 git repo: https://github.com/ssbandjl/nccl.git
+cn_doc: https://blog.csdn.net/kidgin7439/category_11998768.html
+
+git remote add upstream https://github.com/NVIDIA/nccl.git
+git fetch upstream
+git merge upstream/master
 
 
 rdma:
@@ -284,4 +289,54 @@ static void* ncclIbAsyncThreadMain(void* args)
 
 
 ncclIbRtrQp
+
+
+
+NVIDIA NCCL 源码学习（八）- 数据通信链路transport的建立: https://blog.csdn.net/KIDGIN7439/article/details/126953432
+ncclTransportP2pSetup -> 数据通信链路的建立
+graph->intra: GPU/0 GPU/7 GPU/6 GPU/3 GPU/2 GPU/5 GPU/4 GPU/1
+graph->inter: NET/0 NET/0
+
+struct ncclConnector {
+  int connected;
+  struct ncclProxyConnector proxyConn;
+  struct ncclTransportComm* transportComm;
+  void* transportResources;
+  struct ncclConnInfo conn;
+};
+
+nccl现共有三个transport，P2P通过卡间p2p通信，SHM通过机器内共享的host内存通信，NET通过网络通信，nccl会依次通过这三个transport的canConnect判断是否可用，然后选择第一个可用的
+struct ncclTransport netTransport = {
+  "NET",
+  canConnect,
+  { sendSetup, sendConnect, sendFree, proxySharedInit, sendProxySetup, sendProxyConnect, sendProxyFree, sendProxyProgress, NULL },
+  { recvSetup, recvConnect, recvFree, proxySharedInit, recvProxySetup, recvProxyConnect, recvProxyFree, recvProxyProgress, NULL }
+};
+
+gpuFlush也对应一个qp，不过这个qp是local的，即他的对端qp就是自己，当开启gdr之后，每次接收数据后都需要执行一下flush，其实是一个rdma read操作，使用网卡读一下接收到的数据的第一个int到hostMem。官方issue里解释说当通过gdr接收数据完成，产生wc到cpu的时候，接收的数据并不一定在gpu端可以读到，这个时候需要在cpu端执行以下读取
+
+p2pSendConnect
+
+最后简单总结下，建链的过程都是以下过程：
+接收端 执行recv setup，创建buffer等，将相关信息记录到connectIndo，启动一个监听socket，ip port同样记录到connectInfo，通过bootstrap发送connectInfo到 发送端。
+发送端 执行send setup，创建buffer等，将相关信息记录到connectInfo，然后发送给 接收端。这一步rdma场景没有用到connectInfo。
+发送端 接受到步骤1中 接收端 的信息，然后建立 发送端 到 接收端 的链接，p2p场景的话只是简单记录对端buffer，rdma场景的话需要初始化qp到INIT状态。
+接收端 接受到步骤2中send发送的信息，然后建立 接收端 到 发送端 的链接，p2p场景还是记录对端buffer，rdma场景需要初始化qp到RTS状态，将本端的qp信息发送回对端。
+如果rdma场景的话，发送端 还需接收对端的qp状态初始化本端的qp到RTS状态。
+
+
+
+ncclResult_t ncclGetUniqueId(ncclUniqueId* out) {
+  NCCLCHECK(ncclInit());
+    initEnv
+    initGdrCopy
+    bootstrapNetInit
+    ncclNetPluginInit
+    initNvtxRegisteredEnums
+  NCCLCHECK(PtrCheck(out, "GetUniqueId", "out"));
+  ncclResult_t res = bootstrapGetUniqueId((struct ncclBootstrapHandle*)out);
+  TRACE_CALL("ncclGetUniqueId(0x%llx)", (unsigned long long)hashUniqueId(*out));
+  return res;
+}
+
 
