@@ -12,6 +12,7 @@ DEBUG ?= 0
 ASAN ?= 0
 UBSAN ?= 0
 TRACE ?= 0
+WERROR ?= 0
 PROFAPI ?= 1
 NVTX ?= 1
 RDMA_CORE ?= 0
@@ -38,14 +39,20 @@ endif
 CUDA9_GENCODE = -gencode=arch=compute_70,code=sm_70
 CUDA11_GENCODE = -gencode=arch=compute_80,code=sm_80
 CUDA12_GENCODE = -gencode=arch=compute_90,code=sm_90
+CUDA13_GENCODE = -gencode=arch=compute_100,code=sm_100 \
+                 -gencode=arch=compute_120,code=sm_120
 
 CUDA8_PTX     = -gencode=arch=compute_61,code=compute_61
 CUDA9_PTX     = -gencode=arch=compute_70,code=compute_70
 CUDA11_PTX    = -gencode=arch=compute_80,code=compute_80
 CUDA12_PTX    = -gencode=arch=compute_90,code=compute_90
+CUDA13_PTX    = -gencode=arch=compute_120,code=compute_120
 
 
-ifeq ($(shell test "0$(CUDA_MAJOR)" -eq 11 -a "0$(CUDA_MINOR)" -ge 8 -o "0$(CUDA_MAJOR)" -gt 11; echo $$?),0)
+ifeq ($(shell test "0$(CUDA_MAJOR)" -eq 12 -a "0$(CUDA_MINOR)" -ge 8 -o "0$(CUDA_MAJOR)" -gt 12; echo $$?),0)
+# Include Blackwell support if we're using CUDA12.8 or above
+  NVCC_GENCODE ?= $(CUDA8_GENCODE) $(CUDA9_GENCODE) $(CUDA11_GENCODE) $(CUDA12_GENCODE) $(CUDA13_GENCODE) $(CUDA13_PTX)
+else ifeq ($(shell test "0$(CUDA_MAJOR)" -eq 11 -a "0$(CUDA_MINOR)" -ge 8 -o "0$(CUDA_MAJOR)" -gt 11; echo $$?),0)
 # Include Hopper support if we're using CUDA11.8 or above
   NVCC_GENCODE ?= $(CUDA8_GENCODE) $(CUDA9_GENCODE) $(CUDA11_GENCODE) $(CUDA12_GENCODE) $(CUDA12_PTX)
 else ifeq ($(shell test "0$(CUDA_MAJOR)" -ge 11; echo $$?),0)
@@ -113,6 +120,10 @@ endif
 
 ifeq ($(NVTX), 0)
 CXXFLAGS  += -DNVTX_DISABLE
+endif
+
+ifneq ($(WERROR), 0)
+CXXFLAGS  += -Werror
 endif
 
 ifneq ($(KEEP), 0)
