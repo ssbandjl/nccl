@@ -4,9 +4,12 @@ cn_doc: https://blog.csdn.net/kidgin7439/category_11998768.html
 git remote add upstream https://github.com/NVIDIA/nccl.git
 git fetch upstream
 git merge upstream/master
+GIT仓库: https://github.com/ssbandjl/nccl.git
 
+总结:
+NCCL库用原生的RDMA的VERBS接口, 极简(相比UCX和Libfabric,或其他verbs通信库)的实现了单边读写和双边发送/接收通信语义, 以此来满足GPU间高性能和高带宽通信, 满足AI大模型训练中的数据传输
 
-rdma:
+RDMA调用栈-QP建连:
 ncclResult_t ncclIbCreateQp
     qpInitAttr.qp_type = IBV_QPT_RC
     qpInitAttr.cap.max_send_wr = 2*MAX_REQUESTS -> 128
@@ -14,6 +17,7 @@ ncclResult_t ncclIbCreateQp
     wrap_ibv_modify_qp
 
 
+RDMA单边写-调用栈/带立即数
 ncclResult_t ncclIbIsend
     NCCLCHECK(ncclIbMultiSend(comm, slot))
 ncclResult_t ncclIbMultiSend
@@ -31,10 +35,12 @@ ncclResult_t ncclIbMultiSend
         qp->context->ops.post_send(qp, wr, bad_wr) -> ibv_post_send
 
 
-main:
-net_type:
+main: 主函数
+net_type: 网络类型
 ncclNet_t* ncclNets[3] = { nullptr, &ncclNetIb, &ncclNetSocket };
 src/transport/net_ib.cc
+
+IB网卡实现的接口API
 ncclNet_t ncclNetIb = {
   "IB",
   ncclIbInit,
@@ -163,7 +169,7 @@ struct ncclTransport collNetTransport = {
 
 
 
-对齐和常用数据库:
+对齐和常用数学库:
 #define DIVUP(x, y) \
     (((x)+(y)-1)/(y))
 
@@ -225,7 +231,7 @@ ncclResult_t ncclIbConnect(int dev, void* opaqueHandle, void** sendComm)
 
 
 
-
+初始化
 init()
 编译时加载:
 ncclResult_t wrap_ibv_symbols(void) {
@@ -237,7 +243,7 @@ ncclResult_t buildIbvSymbols(struct ncclIbvSymbols* ibvSymbols)
     ibvhandle=dlopen("libibverbs.so", RTLD_NOW)
 
 
-ibv接口, verbs
+ibv接口, verbs, 包装, 符号表
 LOAD_SYM(ibvhandle, "ibv_get_device_list", ibvSymbols->ibv_internal_get_device_list);
 LOAD_SYM(ibvhandle, "ibv_free_device_list", ibvSymbols->ibv_internal_free_device_list);
 LOAD_SYM(ibvhandle, "ibv_get_device_name", ibvSymbols->ibv_internal_get_device_name);
@@ -265,7 +271,7 @@ LOAD_SYM(ibvhandle, "ibv_destroy_qp", ibvSymbols->ibv_internal_destroy_qp);
 LOAD_SYM(ibvhandle, "ibv_fork_init", ibvSymbols->ibv_internal_fork_init); <- wrap_ibv_fork_init
 LOAD_SYM(ibvhandle, "ibv_event_type_str", ibvSymbols->ibv_internal_event_type_str);
 
-带宽:
+RDMA网卡带宽:
 static int ibvSpeeds[] = {
   2500,  /* SDR */
   5000,  /* DDR */
@@ -277,7 +283,7 @@ static int ibvSpeeds[] = {
   100000 /* NDR */ };
 
 
-计算带宽:
+计算带宽的公式:
 ncclIbDevs[ncclNIbDevs].speed = ncclIbSpeed(portAttr.active_speed) * ncclIbWidth(portAttr.active_width);
 
 
@@ -340,3 +346,4 @@ ncclResult_t ncclGetUniqueId(ncclUniqueId* out) {
 }
 
 
+    
