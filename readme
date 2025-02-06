@@ -1,10 +1,12 @@
 git repo: https://github.com/ssbandjl/nccl.git
 cn_doc: https://blog.csdn.net/kidgin7439/category_11998768.html
+nccl_env: https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html#nccl-ib-qps-per-connection
 
 git remote add upstream https://github.com/NVIDIA/nccl.git
 git fetch upstream
 git merge upstream/master
 GIT仓库: https://github.com/ssbandjl/nccl.git
+git pull upstream master
 
 总结:
 NCCL库用原生的RDMA的VERBS接口, 极简(相比UCX和Libfabric,或其他verbs通信库)的实现了单边读写和双边发送/接收通信语义, 以此来满足GPU间高性能和高带宽通信, 满足AI大模型训练中的数据传输
@@ -347,3 +349,7 @@ ncclResult_t ncclGetUniqueId(ncclUniqueId* out) {
 
 
     
+
+NCCL_IB_HCA
+
+
