@@ -21,6 +21,9 @@
 #include <poll.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include <execinfo.h>
+
 #define ENABLE_TIMER 0
 #include "timer.h"
 
@@ -559,6 +562,14 @@ ncclResult_t ncclIbMakeVDevice(int* d, ncclNetVDeviceProps_t* props) {
 
 static ncclProfilerCallback_t ncclProfilerFunction;
 
+static void dump_stack(void) {
+    void *buffer[100];
+    int nptrs = backtrace(buffer, 100);
+
+    fprintf(stderr, "NCCL Stack trace (depth: %d):\n", nptrs);
+    backtrace_symbols_fd(buffer, nptrs, STDERR_FILENO);
+}
+
 ncclResult_t ncclIbInit(ncclDebugLogger_t logFunction, ncclProfilerCallback_t profFunction) {
   ncclResult_t ret = ncclSuccess;
   ncclProfilerFunction = profFunction;
@@ -596,6 +607,7 @@ ncclResult_t ncclIbInit(ncclDebugLogger_t logFunction, ncclProfilerCallback_t pr
 
       for (int d=0; d<nIbDevs && ncclNIbDevs<MAX_IB_DEVS; d++) {
         struct ibv_context * context;
+        dump_stack();
         if (ncclSuccess != wrap_ibv_open_device(&context, devices[d]) || context == NULL) {
           WARN("NET/IB : Unable to open device %s", devices[d]->name);
           continue;
