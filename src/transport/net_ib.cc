@@ -688,6 +688,7 @@ ncclResult_t ncclIbInit(ncclDebugLogger_t logFunction, ncclProfilerCallback_t pr
           vProps.devs[0] = ncclNIbDevs;
           NCCLCHECK(ncclIbMakeVDeviceInternal(&vDev, &vProps));
 
+          printf_ffl("Match dev:%s\n", devices[d]->name);
           ncclNIbDevs++;
           nPorts++;
         }
