@@ -1226,6 +1226,11 @@ static ncclResult_t ncclTopoPopulateNics(ncclComm_t comm, ncclXml* xml, int star
     NCCLCHECK(xmlInitAttrInt(netNode, "maxconn", props.maxComms));
     bool gdrSupport = (props.ptrSupport & NCCL_PTR_CUDA) || (comm->dmaBufSupport && (props.ptrSupport & NCCL_PTR_DMABUF));
     printf_ffl("NCCL GDR, Nic_Indirect_Access_GPU:%d, dma_buf_enable:%d, nic_name:%s\n", props.ptrSupport, comm->dmaBufSupport, props.name);
+    if (props.ptrSupport & NCCL_PTR_CUDA)
+      printf_ffl("Nic support direct CUDA buffer support (typical GDR)\n");
+    if (props.ptrSupport & NCCL_PTR_DMABUF)
+      printf_ffl("Nic %s support dmabuf\n", props.name);
+
     INFO(NCCL_NET,"NET/%s : GPU Direct RDMA %s for HCA %d '%s'", netName, gdrSupport ? "Enabled" : "Disabled", n, props.name);
     NCCLCHECK(xmlInitAttrInt(netNode, "gdr", gdrSupport));
     // Only set coll if it's not 0
