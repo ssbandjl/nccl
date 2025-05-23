@@ -1130,6 +1130,7 @@ ncclResult_t ncclIbCreateQp(uint8_t ib_port, struct ncclIbNetCommDevBase* base, 
   qpInitAttr.cap.max_send_sge = 1;
   qpInitAttr.cap.max_recv_sge = 1;
   qpInitAttr.cap.max_inline_data = ncclParamIbUseInline() ? sizeof(struct ncclIbSendFifo) : 0;
+  printf_ffl("RDMA Create QP\n");
   NCCLCHECK(wrap_ibv_create_qp(&qp->qp, base->pd, &qpInitAttr));
   struct ibv_qp_attr qpAttr;
   memset(&qpAttr, 0, sizeof(struct ibv_qp_attr));
