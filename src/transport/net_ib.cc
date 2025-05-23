@@ -29,6 +29,11 @@
 
 #include "ibvwrap.h"
 
+#ifndef printf_ffl
+#define printf_ffl(format, arg...)						\
+	printf("%s(), %s:%d, " format, __func__, __FILE__, __LINE__, ##arg)
+#endif
+
 #define MAXNAMESIZE 64
 static char ncclIbIfName[MAX_IF_NAME_SIZE+1];
 static union ncclSocketAddress ncclIbIfAddr;
@@ -577,6 +582,8 @@ ncclResult_t ncclIbInit(ncclDebugLogger_t logFunction, ncclProfilerCallback_t pr
   static int shownIbHcaEnv = 0;
   if(wrap_ibv_symbols() != ncclSuccess) { return ncclInternalError; }
 
+  printf_ffl("NCCL Init ib\n");
+  dump_stack();
   if (ncclNIbDevs == -1) {
     pthread_mutex_lock(&ncclIbLock);
     wrap_ibv_fork_init();
@@ -680,6 +687,7 @@ ncclResult_t ncclIbInit(ncclDebugLogger_t logFunction, ncclProfilerCallback_t pr
       if (nIbDevs && (ncclSuccess != wrap_ibv_free_device_list(devices))) { ret = ncclInternalError; goto fail; };
     }
     if (ncclNIbDevs == 0) {
+      printf_ffl("NCCL Not find rdma nic device\n");
       INFO(NCCL_INIT|NCCL_NET, "NET/IB : No device found.");
     }
 
@@ -1075,6 +1083,7 @@ ncclResult_t ncclIbInitCommDevBase(int ibDevN, struct ncclIbNetCommDevBase* base
   base->pd = ibDev->pd;
   pthread_mutex_unlock(&ibDev->lock);
 
+    printf_ffl("NCCL init ib commom dev base, create cq\n");
   // Recv requests can generate 2 completions (one for the post FIFO, one for the Recv).
   NCCLCHECK(wrap_ibv_create_cq(&base->cq, ibDev->context, 2*MAX_REQUESTS*ncclParamIbQpsPerConn(), cq_context, NULL, 0));
 
@@ -1222,6 +1231,7 @@ ncclResult_t ncclIbConnect(int dev, ncclNetCommConfig_t* config, void* opaqueHan
   }
   stage->buffer = NULL;
 
+  printf_ffl("NCCL RDMA Client connect\n");
   NCCLCHECK(ncclIbMalloc((void**)&comm, sizeof(struct ncclIbSendComm)));
   NCCLCHECKGOTO(ncclIbStatsInit(&comm->base.stats), ret, fail);
   NCCLCHECKGOTO(ncclSocketInit(&comm->base.sock, &handle->connectAddr, handle->magic, ncclSocketTypeNetIb, NULL, 1), ret, fail);
@@ -1512,6 +1522,7 @@ ncclResult_t ncclIbAccept(void* listenComm, void** recvComm, ncclNetDeviceHandle
   int link_layer = IBV_LINK_LAYER_UNSPECIFIED;
   *recvComm = NULL;
 
+  printf_ffl("NCCL RDMA server accept\n");
   if (stage->state == ncclIbCommStateAccept)   goto ib_accept_check;
   if (stage->state == ncclIbCommStateRecvDevList) goto ib_recv_dev_list;
   if (stage->state == ncclIbCommStateSendDevList) goto ib_send_dev_list;
