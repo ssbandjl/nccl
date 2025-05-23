@@ -582,8 +582,8 @@ ncclResult_t ncclIbInit(ncclDebugLogger_t logFunction, ncclProfilerCallback_t pr
   static int shownIbHcaEnv = 0;
   if(wrap_ibv_symbols() != ncclSuccess) { return ncclInternalError; }
 
-  printf_ffl("NCCL Init ib\n");
-  dump_stack();
+  // printf_ffl("NCCL Init ib\n");
+  // dump_stack();
   if (ncclNIbDevs == -1) {
     pthread_mutex_lock(&ncclIbLock);
     wrap_ibv_fork_init();
@@ -612,9 +612,10 @@ ncclResult_t ncclIbInit(ncclDebugLogger_t logFunction, ncclProfilerCallback_t pr
 
       if (ncclSuccess != wrap_ibv_get_device_list(&devices, &nIbDevs)) { ret = ncclInternalError; goto fail; }
 
+      printf_ffl("NCCL rdma dev_num:%d\n", nIbDevs);
       for (int d=0; d<nIbDevs && ncclNIbDevs<MAX_IB_DEVS; d++) {
         struct ibv_context * context;
-        dump_stack();
+        // dump_stack();
         if (ncclSuccess != wrap_ibv_open_device(&context, devices[d]) || context == NULL) {
           WARN("NET/IB : Unable to open device %s", devices[d]->name);
           continue;
@@ -627,20 +628,29 @@ ncclResult_t ncclIbInit(ncclDebugLogger_t logFunction, ncclProfilerCallback_t pr
           if (ncclSuccess != wrap_ibv_close_device(context)) { ret = ncclInternalError; goto fail; }
           continue;
         }
+        // printf_ffl("NCCL dev phy_port_cnt:%d\n", devAttr.phys_port_cnt);
         for (int port_num = 1; port_num <= devAttr.phys_port_cnt; port_num++) {
           struct ibv_port_attr portAttr;
           if (ncclSuccess != wrap_ibv_query_port(context, port_num, &portAttr)) {
             WARN("NET/IB : Unable to query port_num %d", port_num);
             continue;
           }
-          if (portAttr.state != IBV_PORT_ACTIVE) continue;
+          if (portAttr.state != IBV_PORT_ACTIVE) {
+            printf_ffl("NCCL state:%d not match, dev_name %s, \n", portAttr.state, devices[d]->name);
+            continue;
+          }
           if (portAttr.link_layer != IBV_LINK_LAYER_INFINIBAND
-              && portAttr.link_layer != IBV_LINK_LAYER_ETHERNET) continue;
+              && portAttr.link_layer != IBV_LINK_LAYER_ETHERNET) {
+                printf_ffl("NCCL link_layer:%d not match, dev_name %s, \n", portAttr.link_layer, devices[d]->name);
+                continue;
+              }
 
           // check against user specified HCAs/ports
           if (! (matchIfList(devices[d]->name, port_num, userIfs, nUserIfs, searchExact) ^ searchNot)) {
+            printf_ffl("NCCL dev_name %s matchIfList failed\n", devices[d]->name);
             continue;
           }
+          // printf_ffl("NCCL dev_name %s, set attr\n", devices[d]->name);
           pthread_mutex_init(&ncclIbDevs[ncclNIbDevs].lock, NULL);
           ncclIbDevs[ncclNIbDevs].device = d;
           ncclIbDevs[ncclNIbDevs].guid = devAttr.sys_image_guid;
@@ -686,6 +696,7 @@ ncclResult_t ncclIbInit(ncclDebugLogger_t logFunction, ncclProfilerCallback_t pr
 
       if (nIbDevs && (ncclSuccess != wrap_ibv_free_device_list(devices))) { ret = ncclInternalError; goto fail; };
     }
+    printf_ffl("NCCL Match dev_num:%d\n", ncclNIbDevs);
     if (ncclNIbDevs == 0) {
       printf_ffl("NCCL Not find rdma nic device\n");
       INFO(NCCL_INIT|NCCL_NET, "NET/IB : No device found.");
@@ -701,6 +712,7 @@ ncclResult_t ncclIbInit(ncclDebugLogger_t logFunction, ncclProfilerCallback_t pr
           ncclIbDevs[d].portNum, NCCL_IB_LLSTR(ncclIbDevs[d].link));
     }
     char addrline[SOCKET_NAME_MAXLEN+1];
+    printf_ffl("Using %s\n", ncclIbIfName);
     INFO(NCCL_INIT|NCCL_NET, "NET/IB : Using%s %s; OOB %s:%s", line, ncclIbRelaxedOrderingEnabled ? "[RO]" : "",
           ncclIbIfName, ncclSocketToString(&ncclIbIfAddr, addrline));
 

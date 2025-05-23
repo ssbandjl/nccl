@@ -437,6 +437,7 @@ ncclResult_t ncclTopoCheckGdr(struct ncclTopoSystem* system, int rank, int64_t n
   }
 
   if (distance > netGdrLevel) {
+    printf_ffl("GPU Direct RDMA Disabled\n");
     INFO(NCCL_NET,"GPU Direct RDMA Disabled for GPU %d / HCA %lx (distance %d > %d)", rank, netId, distance, netGdrLevel);
     return ncclSuccess;
   }

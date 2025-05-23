@@ -31,6 +31,11 @@ extern const char* ncclProtoStr[NCCL_NUM_PROTOCOLS];
 
 #include "net_device.h"
 
+#ifndef printf_ffl
+#define printf_ffl(format, arg...)						\
+	printf("%s(), %s:%d, " format, __func__, __FILE__, __LINE__, ##arg)
+#endif
+
 enum ncclDevRedOp_t {
   ncclDevSum, ncclDevProd, ncclDevMinMax,
   ncclDevPreMulSum, ncclDevSumPostDiv,
