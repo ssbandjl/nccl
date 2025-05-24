@@ -347,4 +347,36 @@ Want me to prepare one for you? Let me know! 🚀
 
 
 
+# install nccl
+```bash
+Network installers (x86)
+If not already done, make sure you install the network repository:
+
+Network Installer for Ubuntu24.04
+
+$ wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb
+$ sudo dpkg -i cuda-keyring_1.1-1_all.deb
+$ sudo apt-get update
+Network Installer for Ubuntu22.04
+
+$ wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+$ sudo dpkg -i cuda-keyring_1.1-1_all.deb
+$ sudo apt-get update
+Network Installer for Ubuntu20.04
+
+$ wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.1-1_all.deb
+$ sudo dpkg -i cuda-keyring_1.1-1_all.deb
+$ sudo apt-get update
+Network Installer for RedHat/CentOS 9
+
+$ sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo
+Network Installer for RedHat/CentOS 8
+
+$ sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+then run the following command to installer NCCL:
+For Ubuntu: sudo apt install libnccl2=2.26.5-1+cuda12.9 libnccl-dev=2.26.5-1+cuda12.9
+For RHEL/Centos: sudo yum install libnccl-2.26.5-1+cuda12.9 libnccl-devel-2.26.5-1+cuda12.9 libnccl-static-2.26.5-1+cuda12.9
+```
+
+
 
