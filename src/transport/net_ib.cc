@@ -1536,7 +1536,7 @@ ncclResult_t ncclIbAccept(void* listenComm, void** recvComm, ncclNetDeviceHandle
   int link_layer = IBV_LINK_LAYER_UNSPECIFIED;
   *recvComm = NULL;
 
-  printf_ffl("NCCL RDMA server accept\n");
+  // printf_ffl("NCCL RDMA server accept\n");
   if (stage->state == ncclIbCommStateAccept)   goto ib_accept_check;
   if (stage->state == ncclIbCommStateRecvDevList) goto ib_recv_dev_list;
   if (stage->state == ncclIbCommStateSendDevList) goto ib_send_dev_list;
