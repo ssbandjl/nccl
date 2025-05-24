@@ -140,3 +140,50 @@ fail:
 ```
 
 
+# listen socket
+```c
+ncclResult_t ncclSocketListen(struct ncclSocket* sock) {
+  if (sock == NULL) {
+    WARN("ncclSocketListen: pass NULL socket");
+    return ncclInvalidArgument;
+  }
+  if (sock->fd == -1) {
+    WARN("ncclSocketListen: file descriptor is -1");
+    return ncclInvalidArgument;
+  }
+
+  if (socketToPort(&sock->addr)) {
+    // Port is forced by env. Make sure we get the port.
+    int opt = 1;
+    SYSCHECK(setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)), "setsockopt");
+#if defined(SO_REUSEPORT)
+    SYSCHECK(setsockopt(sock->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)), "setsockopt");
+#endif
+  }
+
+  // addr port should be 0 (Any port)
+  SYSCHECK(bind(sock->fd, &sock->addr.sa, sock->salen), "bind");
+
+  /* Get the assigned Port */
+  socklen_t size = sock->salen;
+  SYSCHECK(getsockname(sock->fd, &sock->addr.sa, &size), "getsockname");
+
+#ifdef ENABLE_TRACE
+  char line[SOCKET_NAME_MAXLEN+1];
+  TRACE(NCCL_INIT|NCCL_NET,"Listening on socket %s", ncclSocketToString(&sock->addr, line));
+#endif
+
+  /* Put the socket in listen mode
+   * NB: The backlog will be silently truncated to the value in /proc/sys/net/core/somaxconn
+   */
+  SYSCHECK(listen(sock->fd, 16384), "listen");
+  sock->state = ncclSocketStateReady;
+  return ncclSuccess;
+}
+```
+
+
+# bootstrapInit
+```c
+
+```
