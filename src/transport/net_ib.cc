@@ -308,6 +308,7 @@ struct ncclIbRecvComm {
 };
 
 ncclResult_t ncclIbInitVerbs(ibv_context* ctx, struct ncclIbVerbs* verbs) {
+  printf_ffl("RDMA Alloc PD and Create CQ\n");
   NCCLCHECK(wrap_ibv_alloc_pd(&verbs->pd, ctx));
   NCCLCHECK(wrap_ibv_create_cq(&verbs->cq, ctx, MAX_REQUESTS, NULL, NULL, 0));
   return ncclSuccess;
@@ -330,6 +331,7 @@ ncclResult_t ncclIbCreateQp(uint8_t ib_port, struct ncclIbVerbs* verbs, int acce
   qpInitAttr.cap.max_send_sge = 1;
   qpInitAttr.cap.max_recv_sge = 1;
   qpInitAttr.cap.max_inline_data = 0;
+  printf_ffl("RDMA Create QP, max_send_wr/max_recv_wr:128, max_send_sge/max_recv_sge:1\n");
   NCCLCHECK(wrap_ibv_create_qp(qp, verbs->pd, &qpInitAttr));
   struct ibv_qp_attr qpAttr;
   memset(&qpAttr, 0, sizeof(struct ibv_qp_attr));

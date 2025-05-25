@@ -47,7 +47,7 @@ extern std::chrono::high_resolution_clock::time_point ncclEpoch;
 
 #ifndef printf_ffl
 #define printf_ffl(format, arg...)						\
-	printf("%s(), %s:%d, " format, __func__, __FILE__, __LINE__, ##arg)
+	printf("NCCL_XB, %s(), %s:%d, " format, __func__, __FILE__, __LINE__, ##arg)
 #endif
 
 #endif
