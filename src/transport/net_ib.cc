@@ -403,6 +403,7 @@ ncclResult_t ncclIbConnect(int dev, void* opaqueHandle, void** sendComm) {
   NCCLCHECK(connectAddress(&comm->fd, &handle->connectAddr));
   *sendComm = comm;
 
+  printf_ffl("NCCL RDMA Client connect\n");
   // IB Setup
   ibv_context* ctx = ncclIbDevs[dev].context;
   NCCLCHECK(ncclIbInitVerbs(ctx, &comm->verbs));
