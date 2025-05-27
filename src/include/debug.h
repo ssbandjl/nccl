@@ -46,8 +46,11 @@ extern std::chrono::high_resolution_clock::time_point ncclEpoch;
 #endif
 
 #ifndef printf_ffl
-#define printf_ffl(format, arg...)						\
-	printf("NCCL_XB, %s(), %s:%d, " format, __func__, __FILE__, __LINE__, ##arg)
+#define printf_ffl(format, arg...) do { \
+  char hostname[1024]; \
+  getHostName(hostname, 1024, '.'); \
+  printf("[%s] NCCL_XB, %s(), %s:%d, " format, hostname, __func__, __FILE__, __LINE__, ##arg); \
+} while (0)
 #endif
 
 #endif

@@ -308,7 +308,7 @@ struct ncclIbRecvComm {
 };
 
 ncclResult_t ncclIbInitVerbs(ibv_context* ctx, struct ncclIbVerbs* verbs) {
-  printf_ffl("RDMA Alloc PD and Create CQ\n");
+  printf_ffl("RDMA Alloc PD and Create CQ, need_cqe_num:%d\n", MAX_REQUESTS);
   NCCLCHECK(wrap_ibv_alloc_pd(&verbs->pd, ctx));
   NCCLCHECK(wrap_ibv_create_cq(&verbs->cq, ctx, MAX_REQUESTS, NULL, NULL, 0));
   return ncclSuccess;
@@ -331,7 +331,8 @@ ncclResult_t ncclIbCreateQp(uint8_t ib_port, struct ncclIbVerbs* verbs, int acce
   qpInitAttr.cap.max_send_sge = 1;
   qpInitAttr.cap.max_recv_sge = 1;
   qpInitAttr.cap.max_inline_data = 0;
-  printf_ffl("RDMA Create QP, max_send_wr/max_recv_wr:128, max_send_sge/max_recv_sge:1\n");
+  printf_ffl("RDMA Create QP(-> IBV_QPS_INIT), max_send_wr/max_recv_wr:128, max_send_sge/max_recv_sge:1, ib_port:%d, access_flags:%d, scq:%p, rcq:%p\n",
+    ib_port, access_flags, qpInitAttr.send_cq, qpInitAttr.recv_cq);
   NCCLCHECK(wrap_ibv_create_qp(qp, verbs->pd, &qpInitAttr));
   struct ibv_qp_attr qpAttr;
   memset(&qpAttr, 0, sizeof(struct ibv_qp_attr));
@@ -367,6 +368,7 @@ ncclResult_t ncclIbRtrQp(ibv_qp* qp, struct ncclIbQpInfo* info) {
   qpAttr.ah_attr.sl = ncclParamIbSl();
   qpAttr.ah_attr.src_path_bits = 0;
   qpAttr.ah_attr.port_num = info->ib_port;
+  printf_ffl("Modify QP to RTR, dts_qpn:%d, mtu:%d, lid:%d, ib_port:%d, spn:%ld, iid:%ld\n", info->qpn, info->mtu, info->lid, info->ib_port, info->spn, info->iid);
   NCCLCHECK(wrap_ibv_modify_qp(qp, &qpAttr, IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN | IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER));
   return ncclSuccess;
 }
@@ -419,6 +421,7 @@ ncclResult_t ncclIbConnect(int dev, void* opaqueHandle, void** sendComm) {
   qpInfo.ib_port = ib_port;
   qpInfo.qpn = comm->qp->qp_num;
   qpInfo.mtu = portAttr.active_mtu;
+  printf_ffl("NCCL RDMA Client connect, mtu:%d\n", qpInfo.mtu);
 
   // Prepare my fifo
   NCCLCHECK(wrap_ibv_reg_mr(&comm->fifoMr, comm->verbs.pd, comm->fifo, sizeof(struct ncclIbSendFifo)*MAX_REQUESTS, IBV_ACCESS_LOCAL_WRITE|IBV_ACCESS_REMOTE_WRITE|IBV_ACCESS_REMOTE_READ));

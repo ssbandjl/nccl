@@ -141,7 +141,7 @@ void ncclDebugLog(ncclDebugLogLevel level, unsigned long flags, const char *file
                    "\n%s:%d:%d [%d] %s:%d NCCL WARN ", hostname, getpid(), gettid(), cudaDev, filefunc, line);
   else if (level == NCCL_LOG_INFO && ncclDebugLevel >= NCCL_LOG_INFO && (flags & ncclDebugMask))
     len = snprintf(buffer, sizeof(buffer),
-                   "%s:%d:%d [%d] NCCL INFO ", hostname, getpid(), gettid(), cudaDev);
+                   "%s:%d:%d [%d] %s:%d NCCL INFO ", hostname, getpid(), gettid(), cudaDev, filefunc, line);
 #ifdef ENABLE_TRACE
   else if (level == NCCL_LOG_TRACE && ncclDebugLevel >= NCCL_LOG_TRACE && (flags & ncclDebugMask)) {
     auto delta = std::chrono::high_resolution_clock::now() - ncclEpoch;
