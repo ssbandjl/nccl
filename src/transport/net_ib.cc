@@ -1169,23 +1169,24 @@ ncclResult_t ncclIbRtrQp(struct ibv_qp* qp, struct ncclIbGidInfo* sGidInfo, uint
         qpAttr.ah_attr.is_global = 0;
         qpAttr.ah_attr.dlid = info->lid;
     } else {
-	uint16_t flid = ncclIbExtractFlid(&info->gid);
+        uint16_t flid = ncclIbExtractFlid(&info->gid);
         if (flid == 0) {
           WARN("Warning: remote FLID configured as zero even when endpoints are on different subnets, using dlid as fallback");
           qpAttr.ah_attr.dlid = info->lid;
-	} else {
+        } else {
           qpAttr.ah_attr.dlid = ncclIbExtractFlid(&info->gid);
-	}
+        }
         qpAttr.ah_attr.is_global = 1;
         qpAttr.ah_attr.grh.dgid.global.subnet_prefix = info->gid.global.subnet_prefix;
         qpAttr.ah_attr.grh.dgid.global.interface_id = info->gid.global.interface_id;
         qpAttr.ah_attr.grh.sgid_index = sGidInfo->localGidIndex;
-	qpAttr.ah_attr.grh.hop_limit = 255;
+	      qpAttr.ah_attr.grh.hop_limit = 255;
     }
   }
   qpAttr.ah_attr.sl = sl;
   qpAttr.ah_attr.src_path_bits = 0;
   qpAttr.ah_attr.port_num = info->ib_port;
+  printf_ffl("link_layer:%d, is_global:%d\n", info->link_layer, qpAttr.ah_attr.is_global);
   TRACE(NCCL_NET, "NET/IB : ncclIbRtrQp qpn=%u mtu=%d dst=%u ll=%u port=%u sl: %d tc: %d", qp->qp_num, info->mtu, dest_qp_num, info->link_layer, info->ib_port, qpAttr.ah_attr.sl, qpAttr.ah_attr.grh.traffic_class);
   NCCLCHECK(wrap_ibv_modify_qp(qp, &qpAttr, IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN | IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER));
   return ncclSuccess;
