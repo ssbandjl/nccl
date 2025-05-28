@@ -353,7 +353,7 @@ ncclResult_t ncclIbRtrQp(ibv_qp* qp, struct ncclIbQpInfo* info) {
   qpAttr.rq_psn = 0;
   qpAttr.max_dest_rd_atomic = 1;
   qpAttr.min_rnr_timer = 12;
-  if (info->lid == 0) {
+  // if (info->lid == 0) {
     qpAttr.ah_attr.is_global = 1;
     qpAttr.ah_attr.grh.dgid.global.subnet_prefix = info->spn;
     qpAttr.ah_attr.grh.dgid.global.interface_id = info->iid;
@@ -361,14 +361,15 @@ ncclResult_t ncclIbRtrQp(ibv_qp* qp, struct ncclIbQpInfo* info) {
     qpAttr.ah_attr.grh.sgid_index = ncclParamIbGidIndex();
     qpAttr.ah_attr.grh.hop_limit = 255;
     qpAttr.ah_attr.grh.traffic_class = ncclParamIbTc();
-  } else {
-    qpAttr.ah_attr.is_global = 0;
-    qpAttr.ah_attr.dlid = info->lid;
-  }
+  // } else {
+  //   qpAttr.ah_attr.is_global = 0;
+  //   qpAttr.ah_attr.dlid = info->lid;
+  // }
   qpAttr.ah_attr.sl = ncclParamIbSl();
   qpAttr.ah_attr.src_path_bits = 0;
   qpAttr.ah_attr.port_num = info->ib_port;
-  printf_ffl("Modify QP to RTR, dts_qpn:%d, mtu:%d, lid:%d, ib_port:%d, spn:%ld, iid:%ld\n", info->qpn, info->mtu, info->lid, info->ib_port, info->spn, info->iid);
+  printf_ffl("Modify QP to RTR, dts_qpn:%d, mtu:%d, lid:%d, ib_port:%d, spn:%ld, iid:%ld, qpAttr.ah_attr.is_global:%d\n",
+    info->qpn, info->mtu, info->lid, info->ib_port, info->spn, info->iid, qpAttr.ah_attr.is_global);
   NCCLCHECK(wrap_ibv_modify_qp(qp, &qpAttr, IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN | IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER));
   return ncclSuccess;
 }
