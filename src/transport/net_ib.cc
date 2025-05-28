@@ -331,7 +331,7 @@ ncclResult_t ncclIbCreateQp(uint8_t ib_port, struct ncclIbVerbs* verbs, int acce
   qpInitAttr.cap.max_send_sge = 1;
   qpInitAttr.cap.max_recv_sge = 1;
   qpInitAttr.cap.max_inline_data = 0;
-  printf_ffl("RDMA Create QP(-> IBV_QPS_INIT), max_send_wr/max_recv_wr:128, max_send_sge/max_recv_sge:1, ib_port:%d, access_flags:%d, scq:%p, rcq:%p\n",
+  printf_ffl("RDMA Create QP Modify(-> IBV_QPS_INIT), max_send_wr/max_recv_wr:128, max_send_sge/max_recv_sge:1, ib_port:%d, access_flags:%d, scq:%p, rcq:%p\n",
     ib_port, access_flags, qpInitAttr.send_cq, qpInitAttr.recv_cq);
   NCCLCHECK(wrap_ibv_create_qp(qp, verbs->pd, &qpInitAttr));
   struct ibv_qp_attr qpAttr;
@@ -368,7 +368,7 @@ ncclResult_t ncclIbRtrQp(ibv_qp* qp, struct ncclIbQpInfo* info) {
   qpAttr.ah_attr.sl = ncclParamIbSl();
   qpAttr.ah_attr.src_path_bits = 0;
   qpAttr.ah_attr.port_num = info->ib_port;
-  printf_ffl("Modify QP to RTR, dts_qpn:%d, mtu:%d, lid:%d, ib_port:%d, spn:%ld, iid:%ld, qpAttr.ah_attr.is_global:%d\n",
+  printf_ffl("Modify QP to RTR, dts_qpn:%d, mtu:%d, lid:%d, ib_port:%d, spn:%ld, iid:%ld, is_global:%d\n",
     info->qpn, info->mtu, info->lid, info->ib_port, info->spn, info->iid, qpAttr.ah_attr.is_global);
   NCCLCHECK(wrap_ibv_modify_qp(qp, &qpAttr, IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN | IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER));
   return ncclSuccess;
