@@ -361,6 +361,10 @@ ncclResult_t ncclIbRtrQp(ibv_qp* qp, struct ncclIbQpInfo* info) {
     qpAttr.ah_attr.grh.sgid_index = ncclParamIbGidIndex();
     qpAttr.ah_attr.grh.hop_limit = 255;
     qpAttr.ah_attr.grh.traffic_class = ncclParamIbTc();
+    
+    char str[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6, qpAttr.ah_attr.grh.dgid.raw, str, sizeof(str));
+    printf_ffl("GID (IPv6 format): %s\n", str);
   } else {
     qpAttr.ah_attr.is_global = 0;
     qpAttr.ah_attr.dlid = info->lid;
