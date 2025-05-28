@@ -422,7 +422,7 @@ ncclResult_t ncclIbConnect(int dev, void* opaqueHandle, void** sendComm) {
   qpInfo.ib_port = ib_port;
   qpInfo.qpn = comm->qp->qp_num;
   qpInfo.mtu = portAttr.active_mtu;
-  printf_ffl("NCCL RDMA Client connect, mtu:%d\n", qpInfo.mtu);
+  printf_ffl("NCCL RDMA Client connect, mtu:%d, lid:%d\n", qpInfo.mtu, portAttr.lid);
 
   // Prepare my fifo
   NCCLCHECK(wrap_ibv_reg_mr(&comm->fifoMr, comm->verbs.pd, comm->fifo, sizeof(struct ncclIbSendFifo)*MAX_REQUESTS, IBV_ACCESS_LOCAL_WRITE|IBV_ACCESS_REMOTE_WRITE|IBV_ACCESS_REMOTE_READ));
@@ -501,6 +501,7 @@ ncclResult_t ncclIbAccept(void* listenComm, void** recvComm) {
     rComm->gpuFlush.sge.length = 1;
     rComm->gpuFlush.sge.lkey = rComm->gpuFlush.hostMr->lkey;
     NCCLCHECK(ncclIbCreateQp(ib_port, &rComm->verbs, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ, &rComm->gpuFlush.qp));
+    printf_ffl("ib_port:%d, lid:%d, active_mtu:%d\n", ib_port, portAttr.lid, portAttr.active_mtu);
     struct ncclIbQpInfo localQpInfo = {
       .lid=portAttr.lid,
       .ib_port=ib_port,
