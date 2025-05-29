@@ -364,7 +364,7 @@ ncclResult_t ncclIbRtrQp(ibv_qp* qp, struct ncclIbQpInfo* info) {
     
     char str[INET6_ADDRSTRLEN];
     inet_ntop(AF_INET6, qpAttr.ah_attr.grh.dgid.raw, str, sizeof(str));
-    printf_ffl("GID (IPv6 format): %s\n", str);
+    printf_ffl("DGID (IPv6 format): %s\n", str);
   } else {
     qpAttr.ah_attr.is_global = 0;
     qpAttr.ah_attr.dlid = info->lid;
@@ -372,8 +372,8 @@ ncclResult_t ncclIbRtrQp(ibv_qp* qp, struct ncclIbQpInfo* info) {
   qpAttr.ah_attr.sl = ncclParamIbSl();
   qpAttr.ah_attr.src_path_bits = 0;
   qpAttr.ah_attr.port_num = info->ib_port;
-  printf_ffl("Modify QP to RTR, dts_qpn:%d, mtu:%d, lid:%d, ib_port:%d, spn:%ld, iid:%ld, is_global:%d\n",
-    info->qpn, info->mtu, info->lid, info->ib_port, info->spn, info->iid, qpAttr.ah_attr.is_global);
+  printf_ffl("Modify QP(%d) to RTR, dts_qpn:%d, mtu:%d, lid:%d, ib_port:%d, spn:%lx, iid:%lx, is_global:%d\n",
+    qp->qp_num, info->qpn, info->mtu, info->lid, info->ib_port, info->spn, info->iid, qpAttr.ah_attr.is_global);
   NCCLCHECK(wrap_ibv_modify_qp(qp, &qpAttr, IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN | IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER));
   return ncclSuccess;
 }
@@ -387,7 +387,7 @@ ncclResult_t ncclIbRtsQp(ibv_qp* qp) {
   qpAttr.rnr_retry = 7;
   qpAttr.sq_psn = 0;
   qpAttr.max_rd_atomic = 1;
-  printf_ffl("Modify QP to RTS\n");
+  printf_ffl("Modify QP(%d) to RTS\n", qp->qp_num);
   NCCLCHECK(wrap_ibv_modify_qp(qp, &qpAttr, IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT | IBV_QP_RNR_RETRY | IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC));
   return ncclSuccess;
 }
@@ -413,7 +413,7 @@ ncclResult_t ncclIbConnect(int dev, void* opaqueHandle, void** sendComm) {
   NCCLCHECK(connectAddress(&comm->fd, &handle->connectAddr));
   *sendComm = comm;
 
-  printf_ffl("NCCL RDMA Client connect\n");
+  // printf_ffl("NCCL RDMA Client connect\n");
   // IB Setup
   ibv_context* ctx = ncclIbDevs[dev].context;
   NCCLCHECK(ncclIbInitVerbs(ctx, &comm->verbs));
@@ -663,6 +663,7 @@ ncclResult_t ncclIbIsend(void* sendComm, void* data, int size, void* mhandle, vo
   comm->fifoHead++;
 
   struct ibv_send_wr* bad_wr;
+  printf_ffl("Post WR for qp:%d\n", comm->qp->qp_num);
   NCCLCHECK(wrap_ibv_post_send(comm->qp, &wr, &bad_wr));
   *request = req;
   return ncclSuccess;
@@ -692,6 +693,7 @@ ncclResult_t ncclIbPostFifo(struct ncclIbRecvComm* comm, uint32_t rkey, uint64_t
   wr.send_flags = IBV_SEND_SIGNALED | comm->remFifo.flags; // IBV_SEND_INLINE
 
   struct ibv_send_wr* bad_wr;
+  printf_ffl("Post WR for qp:%d\n", comm->qp->qp_num);
   NCCLCHECK(wrap_ibv_post_send(comm->qp, &wr, &bad_wr));
   comm->remFifo.tail++;
 
@@ -754,6 +756,7 @@ ncclResult_t ncclIbFlush(void* recvComm, void* data, int size, void* mhandle) {
   wr.send_flags = IBV_SEND_SIGNALED;
 
   struct ibv_send_wr* bad_wr;
+  printf_ffl("Post WR for qp:%d\n", comm->gpuFlush.qp->qp_num);
   NCCLCHECK(wrap_ibv_post_send(comm->gpuFlush.qp, &wr, &bad_wr));
 
   int done = 0;
