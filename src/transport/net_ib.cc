@@ -372,7 +372,7 @@ ncclResult_t ncclIbRtrQp(ibv_qp* qp, struct ncclIbQpInfo* info) {
   qpAttr.ah_attr.sl = ncclParamIbSl();
   qpAttr.ah_attr.src_path_bits = 0;
   qpAttr.ah_attr.port_num = info->ib_port;
-  printf_ffl("Modify QP(%d) to RTR, dts_qpn:%d, mtu:%d, lid:%d, ib_port:%d, spn:%lx, iid:%lx, is_global:%d\n",
+  printf_ffl("Modify QP(%d) to RTR, dts_qpn:%d, mtu:%d, lid:%d, ib_port:%d, spn:%lx, iid:0x%lx, is_global:%d\n",
     qp->qp_num, info->qpn, info->mtu, info->lid, info->ib_port, info->spn, info->iid, qpAttr.ah_attr.is_global);
   NCCLCHECK(wrap_ibv_modify_qp(qp, &qpAttr, IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN | IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER));
   return ncclSuccess;
@@ -771,6 +771,7 @@ ncclResult_t ncclIbTest(void* request, int* done, int* size) {
   struct ncclIbRequest *r = (struct ncclIbRequest*)request;
   *done = 0;
 
+  printf_ffl("Poll CQ, r_size:%d\n", r->size);
   while (1) {
     if (r->done == 1) {
       *done = 1;
