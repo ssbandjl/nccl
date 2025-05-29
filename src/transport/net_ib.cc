@@ -771,7 +771,7 @@ ncclResult_t ncclIbTest(void* request, int* done, int* size) {
   struct ncclIbRequest *r = (struct ncclIbRequest*)request;
   *done = 0;
 
-  printf_ffl("Poll CQ, r_size:%d\n", r->size);
+  // printf_ffl("Poll CQ, r_size:%d\n", r->size);
   while (1) {
     if (r->done == 1) {
       *done = 1;
