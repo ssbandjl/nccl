@@ -663,7 +663,7 @@ ncclResult_t ncclIbIsend(void* sendComm, void* data, int size, void* mhandle, vo
   comm->fifoHead++;
 
   struct ibv_send_wr* bad_wr;
-  printf_ffl("Post WR for qp:%d\n", comm->qp->qp_num);
+  printf_ffl("Post WR for qp:%d, op:IBV_WR_RDMA_WRITE_WITH_IMM, size:%d\n", comm->qp->qp_num, size);
   NCCLCHECK(wrap_ibv_post_send(comm->qp, &wr, &bad_wr));
   *request = req;
   return ncclSuccess;
@@ -693,7 +693,7 @@ ncclResult_t ncclIbPostFifo(struct ncclIbRecvComm* comm, uint32_t rkey, uint64_t
   wr.send_flags = IBV_SEND_SIGNALED | comm->remFifo.flags; // IBV_SEND_INLINE
 
   struct ibv_send_wr* bad_wr;
-  printf_ffl("Post WR for qp:%d\n", comm->qp->qp_num);
+  printf_ffl("Post WR for qp:%d, op:IBV_WR_RDMA_WRITE, IBV_SEND_SIGNALED, send_flag:%d \n", comm->qp->qp_num, wr.send_flags);
   NCCLCHECK(wrap_ibv_post_send(comm->qp, &wr, &bad_wr));
   comm->remFifo.tail++;
 
