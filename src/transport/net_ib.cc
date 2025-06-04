@@ -427,7 +427,7 @@ ncclResult_t ncclIbConnect(int dev, void* opaqueHandle, void** sendComm) {
   qpInfo.ib_port = ib_port;
   qpInfo.qpn = comm->qp->qp_num;
   qpInfo.mtu = portAttr.active_mtu;
-  printf_ffl("Malloc IbSendComm success, then RDMA Client connect, mtu:%d, lid:%d, reg mr fifo:%p\n", qpInfo.mtu, portAttr.lid, comm->fifo);
+  printf_ffl("Malloc IbSendComm success, then RDMA Client connect, mtu:%d, lid:%d, reg mr fifo:%p, size:%ld\n", qpInfo.mtu, portAttr.lid, comm->fifo, sizeof(struct ncclIbSendFifo)*MAX_REQUESTS);
 
   // Prepare my fifo
   NCCLCHECK(wrap_ibv_reg_mr(&comm->fifoMr, comm->verbs.pd, comm->fifo, sizeof(struct ncclIbSendFifo)*MAX_REQUESTS, IBV_ACCESS_LOCAL_WRITE|IBV_ACCESS_REMOTE_WRITE|IBV_ACCESS_REMOTE_READ));
@@ -665,7 +665,7 @@ ncclResult_t ncclIbIsend(void* sendComm, void* data, int size, void* mhandle, vo
   comm->fifoHead++;
 
   struct ibv_send_wr* bad_wr;
-  printf_ffl("Post WR for qp:%d, op:IBV_WR_RDMA_WRITE_WITH_IMM, size:%d\n", comm->qp->qp_num, size);
+  printf_ffl("Post WR for qp:%d, op:%d, size:%d, req:0x%lu(%p)\n", comm->qp->qp_num, wr.opcode, size, wr.wr_id, req);
   NCCLCHECK(wrap_ibv_post_send(comm->qp, &wr, &bad_wr));
   *request = req;
   return ncclSuccess;
@@ -695,7 +695,7 @@ ncclResult_t ncclIbPostFifo(struct ncclIbRecvComm* comm, uint32_t rkey, uint64_t
   wr.send_flags = IBV_SEND_SIGNALED | comm->remFifo.flags; // IBV_SEND_INLINE
 
   struct ibv_send_wr* bad_wr;
-  printf_ffl("Post WR for qp:%d, op:IBV_WR_RDMA_WRITE, IBV_SEND_SIGNALED, send_flag:%d \n", comm->qp->qp_num, wr.send_flags);
+  printf_ffl("Post WR for qp:%d, op:IBV_WR_RDMA_WRITE, IBV_SEND_SIGNALED, send_flag:%d, wr_id:0x%lu\n", comm->qp->qp_num, wr.send_flags, wr.wr_id);
   NCCLCHECK(wrap_ibv_post_send(comm->qp, &wr, &bad_wr));
   comm->remFifo.tail++;
 
@@ -795,6 +795,7 @@ ncclResult_t ncclIbTest(void* request, int* done, int* size) {
       }
 
       struct ncclIbRequest* doneReq = (struct ncclIbRequest*)wc->wr_id;
+      printf_ffl("doneReq:%p, wr_id:0x%lu\n", doneReq, wc->wr_id);
       if (doneReq) {
         if (wc->opcode == IBV_WC_RECV) {
           doneReq->size = wc->byte_len;
