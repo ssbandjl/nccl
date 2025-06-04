@@ -427,7 +427,7 @@ ncclResult_t ncclIbConnect(int dev, void* opaqueHandle, void** sendComm) {
   qpInfo.ib_port = ib_port;
   qpInfo.qpn = comm->qp->qp_num;
   qpInfo.mtu = portAttr.active_mtu;
-  printf_ffl("Malloc IbSendComm success, then RDMA Client connect, mtu:%s, lid:%d, reg mr fifo:%p, size:%ld\n", ibv_mtr_str[qpInfo.mtu], portAttr.lid, comm->fifo, sizeof(struct ncclIbSendFifo)*MAX_REQUESTS);
+  printf_ffl("Malloc IbSendComm success, then RDMA Client connect and Reg mr, mtu:%s, lid:%d, reg mr fifo:%p, size:%ld\n", ibv_mtr_str[qpInfo.mtu], portAttr.lid, comm->fifo, sizeof(struct ncclIbSendFifo)*MAX_REQUESTS);
 
   // Prepare my fifo
   NCCLCHECK(wrap_ibv_reg_mr(&comm->fifoMr, comm->verbs.pd, comm->fifo, sizeof(struct ncclIbSendFifo)*MAX_REQUESTS, IBV_ACCESS_LOCAL_WRITE|IBV_ACCESS_REMOTE_WRITE|IBV_ACCESS_REMOTE_READ));
@@ -597,7 +597,7 @@ ncclResult_t ncclIbRegMr(void* comm, void* data, int size, int type, void** mhan
   uint64_t regSize = addr+size - regAddr;
   regSize = ((regSize + REG_ALIGN-1) / REG_ALIGN ) * REG_ALIGN;
   struct ibv_mr* mr;
-  printf_ffl("Reg mr, regAddr:%p\n", (void*)regAddr);
+  printf_ffl("Reg mr, regAddr:%p, size:%lu\n", (void*)regAddr, regSize);
   NCCLCHECK(wrap_ibv_reg_mr(&mr, verbs->pd, (void*)regAddr, regSize, IBV_ACCESS_LOCAL_WRITE|IBV_ACCESS_REMOTE_WRITE|IBV_ACCESS_REMOTE_READ));
   *mhandle = (void*)mr;
   TRACE(NCCL_INIT,"regAddr %lx size %ld rkey %x", regAddr, regSize, mr->rkey);
