@@ -23,6 +23,15 @@
 
 #include "ibvwrap.h"
 
+static const char *ibv_mtr_str[] = {
+  "NULL"
+	"IBV_MTU_256",
+	"IBV_MTU_512",
+	"IBV_MTU_1024",
+	"IBV_MTU_2048",
+	"IBV_MTU_4096",
+};
+
 #define USE_RDMA_WRITE 1
 #define USE_RDMA_SEND_INLINE 0
 #define MAXNAMESIZE 64
@@ -427,7 +436,7 @@ ncclResult_t ncclIbConnect(int dev, void* opaqueHandle, void** sendComm) {
   qpInfo.ib_port = ib_port;
   qpInfo.qpn = comm->qp->qp_num;
   qpInfo.mtu = portAttr.active_mtu;
-  printf_ffl("Malloc IbSendComm success, then RDMA Client connect, mtu:%d, lid:%d, reg mr fifo:%p, size:%ld\n", qpInfo.mtu, portAttr.lid, comm->fifo, sizeof(struct ncclIbSendFifo)*MAX_REQUESTS);
+  printf_ffl("Malloc IbSendComm success, then RDMA Client connect, mtu:%s, lid:%d, reg mr fifo:%p, size:%ld\n", ibv_mtr_str[qpInfo.mtu], portAttr.lid, comm->fifo, sizeof(struct ncclIbSendFifo)*MAX_REQUESTS);
 
   // Prepare my fifo
   NCCLCHECK(wrap_ibv_reg_mr(&comm->fifoMr, comm->verbs.pd, comm->fifo, sizeof(struct ncclIbSendFifo)*MAX_REQUESTS, IBV_ACCESS_LOCAL_WRITE|IBV_ACCESS_REMOTE_WRITE|IBV_ACCESS_REMOTE_READ));
