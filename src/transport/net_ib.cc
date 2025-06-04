@@ -23,15 +23,6 @@
 
 #include "ibvwrap.h"
 
-static const char *ibv_mtr_str[] = {
-  "NULL"
-	"IBV_MTU_256",
-	"IBV_MTU_512",
-	"IBV_MTU_1024",
-	"IBV_MTU_2048",
-	"IBV_MTU_4096",
-};
-
 #define USE_RDMA_WRITE 1
 #define USE_RDMA_SEND_INLINE 0
 #define MAXNAMESIZE 64
