@@ -665,7 +665,7 @@ ncclResult_t ncclIbIsend(void* sendComm, void* data, int size, void* mhandle, vo
   comm->fifoHead++;
 
   struct ibv_send_wr* bad_wr;
-  printf_ffl("Post WR for qp:%d, op:%d, size:%d, req:0x%lu(%p)\n", comm->qp->qp_num, wr.opcode, size, wr.wr_id, req);
+  printf_ffl("Post WR for qp:%d, op:%d, size:%d, req(wr_id):0x%lu(%p)\n", comm->qp->qp_num, wr.opcode, size, wr.wr_id, req);
   NCCLCHECK(wrap_ibv_post_send(comm->qp, &wr, &bad_wr));
   *request = req;
   return ncclSuccess;
@@ -758,7 +758,7 @@ ncclResult_t ncclIbFlush(void* recvComm, void* data, int size, void* mhandle) {
   wr.send_flags = IBV_SEND_SIGNALED;
 
   struct ibv_send_wr* bad_wr;
-  printf_ffl("Post WR for qp:%d\n", comm->gpuFlush.qp->qp_num);
+  printf_ffl("Post WR for qp:%d, wr_id:0x%lu\n", comm->gpuFlush.qp->qp_num, wr.wr_id);
   NCCLCHECK(wrap_ibv_post_send(comm->gpuFlush.qp, &wr, &bad_wr));
 
   int done = 0;
