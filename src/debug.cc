@@ -123,7 +123,7 @@ void ncclDebugInit() {
  * Also exported to the dynamically loadable Net transport modules so
  * they can share the debugging mechanisms and output files
  */
-void ncclDebugLog(ncclDebugLogLevel level, unsigned long flags, const char *filefunc, int line, const char *fmt, ...) {
+void ncclDebugLog(ncclDebugLogLevel level, unsigned long flags, const char *filefunc, const char *file, int line, const char *fmt, ...) {
   if (ncclDebugLevel == -1) ncclDebugInit();
   if (ncclDebugNoWarn == 1 && level == NCCL_LOG_WARN) level = NCCL_LOG_INFO;
 
@@ -138,16 +138,16 @@ void ncclDebugLog(ncclDebugLogLevel level, unsigned long flags, const char *file
   if (ncclDebugNoWarn && ncclDebugLevel == NCCL_LOG_WARN) printf("WARN -> INFO\n");
   if (level == NCCL_LOG_WARN && ncclDebugLevel >= NCCL_LOG_WARN)
     len = snprintf(buffer, sizeof(buffer),
-                   "\n%s:%d:%d [%d] %s:%d NCCL WARN ", hostname, getpid(), gettid(), cudaDev, filefunc, line);
+                   "\n%s:%d:%d [%d] %s(), %s:%d NCCL WARN ", hostname, getpid(), gettid(), cudaDev, filefunc, file, line);
   else if (level == NCCL_LOG_INFO && ncclDebugLevel >= NCCL_LOG_INFO && (flags & ncclDebugMask))
     len = snprintf(buffer, sizeof(buffer),
-                   "%s:%d:%d [%d] NCCL INFO ", hostname, getpid(), gettid(), cudaDev);
+                   "%s:%d:%d [%d] %s(), %s:%d NCCL INFO ", hostname, getpid(), gettid(), cudaDev, filefunc, file, line);
 #ifdef ENABLE_TRACE
   else if (level == NCCL_LOG_TRACE && ncclDebugLevel >= NCCL_LOG_TRACE && (flags & ncclDebugMask)) {
     auto delta = std::chrono::high_resolution_clock::now() - ncclEpoch;
     double timestamp = std::chrono::duration_cast<std::chrono::duration<double>>(delta).count()*1000;
     len = snprintf(buffer, sizeof(buffer),
-                   "%s:%d:%d [%d] %f %s:%d NCCL TRACE ", hostname, getpid(), gettid(), cudaDev, timestamp, filefunc, line);
+                   "%s:%d:%d [%d] %f %s(), %s:%d NCCL TRACE ", hostname, getpid(), gettid(), cudaDev, timestamp, filefunc, file, line);
   }
 #endif
   if (len) {
@@ -162,8 +162,8 @@ void ncclDebugLog(ncclDebugLogLevel level, unsigned long flags, const char *file
 
   // If ncclDebugLevel == NCCL_LOG_ABORT then WARN() will also call abort()
   if (level == NCCL_LOG_WARN && ncclDebugLevel == NCCL_LOG_ABORT) {
-    fprintf(stderr,"\n%s:%d:%d [%d] %s:%d NCCL ABORT\n",
-            hostname, getpid(), gettid(), cudaDev, filefunc, line);
+    fprintf(stderr,"\n%s:%d:%d [%d] %s(), %s:%d NCCL ABORT\n",
+            hostname, getpid(), gettid(), cudaDev, filefunc, file, line);
     abort();
   }
 }

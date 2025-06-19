@@ -152,6 +152,15 @@ enum ibv_mtu {
 	IBV_MTU_4096 = 5
 };
 
+static const char *ibv_mtr_str[] = {
+	"Unknow",
+	"IBV_MTU_256",
+	"IBV_MTU_512",
+	"IBV_MTU_1024",
+	"IBV_MTU_2048",
+	"IBV_MTU_4096"
+};
+
 enum ibv_port_state {
 	IBV_PORT_NOP		= 0,
 	IBV_PORT_DOWN		= 1,
