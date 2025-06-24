@@ -29,11 +29,6 @@
 
 #include "ibvwrap.h"
 
-#ifndef printf_ffl
-#define printf_ffl(format, arg...)						\
-	printf("%s(), %s:%d, " format, __func__, __FILE__, __LINE__, ##arg)
-#endif
-
 #define MAXNAMESIZE 64
 static char ncclIbIfName[MAX_IF_NAME_SIZE+1];
 static union ncclSocketAddress ncclIbIfAddr;
