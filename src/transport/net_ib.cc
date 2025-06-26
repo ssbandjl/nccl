@@ -703,7 +703,7 @@ ncclResult_t ncclIbInit(ncclDebugLogger_t logFunction, ncclProfilerCallback_t pr
     line[0] = '\0';
     // Determine whether RELAXED_ORDERING is enabled and possible
     ncclIbRelaxedOrderingEnabled = ncclIbRelaxedOrderingCapable();
-    ncclIbRelaxedOrderingEnabled = 0;
+    // ncclIbRelaxedOrderingEnabled = 0;
     for (int d = 0; d < ncclNIbDevs; d++) {
         snprintf(line+strlen(line), sizeof(line)-strlen(line), " [%d]%s:%d/%s", d, ncclIbDevs[d].devName,
           ncclIbDevs[d].portNum, NCCL_IB_LLSTR(ncclIbDevs[d].link));
