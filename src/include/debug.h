@@ -32,6 +32,7 @@ extern char ncclLastError[];
 
 #define NCCL_DEBUG 0
 #ifndef printf_ffl
+#include <sys/syscall.h>
 #define printf_ffl(format, arg...) do {							\
 	if (NCCL_DEBUG) {								\
 		char hostname[128] = {0};  							\
