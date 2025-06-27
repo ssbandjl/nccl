@@ -30,11 +30,15 @@ extern char ncclLastError[];
 #define INFO(FLAGS, ...) ncclDebugLog(NCCL_LOG_INFO, (FLAGS), __func__, __FILE__, __LINE__, __VA_ARGS__)
 #define TRACE_CALL(...) ncclDebugLog(NCCL_LOG_TRACE, NCCL_CALL, __func__, __FILE__, __LINE__, __VA_ARGS__)
 
+#define NCCL_DEBUG 0
 #ifndef printf_ffl
-#define printf_ffl(format, arg...)	do {					\
-  char hostname[1024];  \
-  gethostname(hostname, 1024); \
-  printf("[%s] %s(), %s:%d, " format, hostname, __func__, __FILE__, __LINE__, ##arg);	\
+#define printf_ffl(format, arg...) do {							\
+	if (NCCL_DEBUG) {								\
+		char hostname[128] = {0};  							\
+		gethostname(hostname, sizeof(hostname)); 						\
+		printf("[%s] tid:%ld, %s(), %s:%d, " format,					\
+			hostname, (long)syscall(SYS_gettid), __FUNCTION__, __FILE__, __LINE__, ##arg);	\
+	}										\
 } while(0)
 #endif
 
