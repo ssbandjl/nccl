@@ -43,6 +43,19 @@ extern char ncclLastError[];
 } while(0)
 #endif
 
+#define NCCL_PRINT_LOG 1
+#ifndef print_log
+#include <sys/syscall.h>
+#define print_log(format, arg...) do {							\
+	if (NCCL_PRINT_LOG) {								\
+		char hostname[128] = {0};  							\
+		gethostname(hostname, sizeof(hostname)); 						\
+		printf("[%s] tid:%ld, %s(), %s:%d, " format,					\
+			hostname, (long)syscall(SYS_gettid), __FUNCTION__, __FILE__, __LINE__, ##arg);	\
+	}										\
+} while(0)
+#endif
+
 #define ENABLE_TRACE
 #ifdef ENABLE_TRACE
 #define TRACE(FLAGS, ...) ncclDebugLog(NCCL_LOG_TRACE, (FLAGS), __func__, __FILE__, __LINE__, __VA_ARGS__)
