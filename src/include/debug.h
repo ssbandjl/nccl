@@ -44,9 +44,9 @@ extern char ncclLastError[];
 #endif
 
 #define NCCL_PRINT_LOG 1
-#ifndef print_log
+#ifndef printf_log
 #include <sys/syscall.h>
-#define print_log(format, arg...) do {							\
+#define printf_log(format, arg...) do {							\
 	if (NCCL_PRINT_LOG) {								\
 		char hostname[128] = {0};  							\
 		gethostname(hostname, sizeof(hostname)); 						\
