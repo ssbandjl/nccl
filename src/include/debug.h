@@ -30,7 +30,7 @@ extern char ncclLastError[];
 #define INFO(FLAGS, ...) ncclDebugLog(NCCL_LOG_INFO, (FLAGS), __func__, __FILE__, __LINE__, __VA_ARGS__)
 #define TRACE_CALL(...) ncclDebugLog(NCCL_LOG_TRACE, NCCL_CALL, __func__, __FILE__, __LINE__, __VA_ARGS__)
 
-#define NCCL_DEBUG 1
+#define NCCL_DEBUG 0
 #ifndef printf_ffl
 #include <sys/syscall.h>
 #define printf_ffl(format, arg...) do {							\
