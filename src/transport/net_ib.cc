@@ -803,11 +803,15 @@ ncclResult_t ncclIbGetPhysProperties(int dev, ncclNetProperties_t* props) {
   if (ncclIbGdrSupport() == ncclSuccess) {
     printf_ffl("Nic support ib gdr, add NCCL_PTR_CUDA flag\n");
     props->ptrSupport |= NCCL_PTR_CUDA; // GDR support via nv_peermem
+  } else {
+    printf_ffl("Nic not support ib gdr, not set NCCL_PTR_CUDA flag\n");
   }
   props->regIsGlobal = 1;
   if (ncclIbDmaBufSupport(dev) == ncclSuccess) {
     printf_ffl("Nic support ib gdr dmabuf, add NCCL_PTR_DMABUF flag\n");
     props->ptrSupport |= NCCL_PTR_DMABUF; // GDR support via DMA-BUF
+  } else {
+    printf_ffl("Nic not support ib gdr dmabuf, not set NCCL_PTR_DMABUF flag\n");
   }
   props->forceFlush = 0;
   props->latency = 0; // Not set
