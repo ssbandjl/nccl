@@ -1225,7 +1225,8 @@ static ncclResult_t ncclTopoPopulateNics(ncclComm_t comm, ncclXml* xml, int star
     NCCLCHECK(xmlInitAttrUint64(netNode, "guid", props.guid));
     NCCLCHECK(xmlInitAttrInt(netNode, "maxconn", props.maxComms));
     bool gdrSupport = (props.ptrSupport & NCCL_PTR_CUDA) || (comm->dmaBufSupport && (props.ptrSupport & NCCL_PTR_DMABUF));
-    printf_ffl("NCCL GDR, Nic_Indirect_Access_GPU:%d, dma_buf_enable:%d, nic_name:%s\n", props.ptrSupport, comm->dmaBufSupport, props.name);
+    printf_ffl("NCCL GDR, Nic_Indirect_Access_GPU(nv_peer_support):%d, gpu_dma_buf_enable:%d, nic_name:%s, nic_support_dmabuf:%d\n",
+      props.ptrSupport, comm->dmaBufSupport, props.name, props.ptrSupport & NCCL_PTR_DMABUF);
     if (props.ptrSupport & NCCL_PTR_CUDA)
       printf_ffl("Nic support direct CUDA buffer support (typical GDR)\n");
     if (props.ptrSupport & NCCL_PTR_DMABUF)
