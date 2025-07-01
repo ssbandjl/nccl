@@ -742,8 +742,10 @@ static void ibGdrSupportInitOnce() {
 ncclResult_t ncclIbGdrSupport() {
   static pthread_once_t once = PTHREAD_ONCE_INIT;
   pthread_once(&once, ibGdrSupportInitOnce);
-  if (!ncclIbGdrModuleLoaded)
+  if (!ncclIbGdrModuleLoaded) {
+    printf_ffl("Warning, no find memory_peers, /sys/kernel/mm/memory_peers/nv_mem/version or /sys/kernel/mm/memory_peers/nv_mem_nc/version or /sys/module/nvidia_peermem/version\n");
     return ncclSystemError;
+  }
   return ncclSuccess;
 }
 
