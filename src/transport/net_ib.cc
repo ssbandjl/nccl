@@ -767,9 +767,11 @@ static void ibDmaBufSupportInitOnce(){
   NCCLCHECKGOTO(wrap_ibv_dealloc_pd(pd), res, failure);
   // stop the search and goto failure
   if (dev_fail) goto failure;
+  printf_ffl("dev_name:%s, dmabuf support\n", ibDev->devName);
   ibDev->dmaBufSupported = 1;
   return;
 failure:
+printf_ffl("dev_name:%s, dmabuf not support\n", ibDev->devName);
   ibDev->dmaBufSupported = -1;
   return;
 }
