@@ -801,10 +801,12 @@ ncclResult_t ncclIbGetPhysProperties(int dev, ncclNetProperties_t* props) {
   props->guid = ibDev->guid;
   props->ptrSupport = NCCL_PTR_HOST;
   if (ncclIbGdrSupport() == ncclSuccess) {
+    printf_ffl("Nic support ib gdr, add NCCL_PTR_CUDA flag\n");
     props->ptrSupport |= NCCL_PTR_CUDA; // GDR support via nv_peermem
   }
   props->regIsGlobal = 1;
   if (ncclIbDmaBufSupport(dev) == ncclSuccess) {
+    printf_ffl("Nic support ib gdr dmabuf, add NCCL_PTR_DMABUF flag\n");
     props->ptrSupport |= NCCL_PTR_DMABUF; // GDR support via DMA-BUF
   }
   props->forceFlush = 0;
@@ -829,6 +831,7 @@ ncclResult_t ncclIbGetProperties(int dev, ncclNetProperties_t* props) {
   NCCLCHECK(ncclIbGetPhysProperties(mergedDev->vProps.devs[0], props));
   props->name = mergedDev->devName;
   props->speed = mergedDev->speed;
+  printf_ffl("Check phy prop, dev:%d, props->name:%s, props->speed:%d\n", dev, props->name, props->speed);
   memcpy(&props->vProps, &mergedDev->vProps, sizeof(ncclNetVDeviceProps_t));
   return ncclSuccess;
 }
