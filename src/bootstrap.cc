@@ -640,7 +640,7 @@ ncclResult_t bootstrapInit(int nHandles, void* handles, struct ncclComm* comm) {
   comm->bootstrap = state;
   comm->magic = state->magic = BOOTSTRAP_HANDLE(handles, 0)->magic; // state and comm magic set to the first magic ID
 
-  TRACE(NCCL_BOOTSTRAP, "rank %d nranks %d", rank, nranks);
+  INFO(NCCL_BOOTSTRAP, "rank %d nranks %d", rank, nranks);
 
   BOOTSTRAP_PROF_OPEN(timers[BOOTSTRAP_INIT_TIME_TOTAL]);
   // fill up the info

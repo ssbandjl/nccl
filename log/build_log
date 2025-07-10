@@ -1,0 +1,22 @@
+root@gdr114:~/project/ai/nccl# make -j src.build CUDA_HOME=/usr/lib/cuda NVCC_GENCODE="-gencode=arch=compute_70,code=sm_70"
+make -C src build BUILDDIR=/root/project/ai/nccl/build
+make[1]: Entering directory '/root/project/ai/nccl/src'
+NVCC_GENCODE is -gencode=arch=compute_70,code=sm_70
+make[2]: Entering directory '/root/project/ai/nccl/src/device'
+NVCC_GENCODE is -gencode=arch=compute_70,code=sm_70
+Compiling       build/obj/device/gensrc/all_reduce_minmax_f64.cu
+Compiling       build/obj/device/gensrc/all_reduce_minmax_f16.cu
+Compiling       build/obj/device/gensrc/all_reduce_minmax_u8.cu
+Compiling       build/obj/device/gensrc/all_reduce_premulsum_f16.cu
+Compiling       build/obj/device/gensrc/all_reduce_premulsum_u8.cu
+Compiling       build/obj/device/gensrc/all_reduce_premulsum_bf16.cu
+Compiling       build/obj/device/gensrc/all_reduce_prod_u8.cu
+Compiling       build/obj/device/gensrc/all_reduce_prod_bf16.cu
+Compiling       build/obj/device/gensrc/all_reduce_sum_u8.cu
+Compiling       build/obj/device/gensrc/all_reduce_sum_bf16.cu
+Compiling       build/obj/device/gensrc/all_reduce_sumpostdiv_u8.cu
+make[2]: Leaving directory '/root/project/ai/nccl/src/device'
+Linking    libnccl.so.2.26.6                   > /root/project/ai/nccl-tests/nccl/build/lib/libnccl.so.2.26.6
+Archiving  libnccl_static.a                    > /root/project/ai/nccl-tests/nccl/build/lib/libnccl_static.a
+make[1]: Leaving directory '/root/project/ai/nccl/src'
+root@gdr114:~/project/ai/nccl#

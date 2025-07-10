@@ -1187,6 +1187,15 @@ out:
   return res;
 }
 
+#include <execinfo.h>
+static void dump_stack(void) {
+    void *buffer[100];
+    int nptrs = backtrace(buffer, 100);
+
+    fprintf(stderr, "NCCL Stack trace (depth: %d):\n", nptrs);
+    backtrace_symbols_fd(buffer, nptrs, STDERR_FILENO);
+}
+
 static ncclResult_t ncclTopoPopulateNics(ncclComm_t comm, ncclXml* xml, int startIndex, int endIndex, ncclResult_t (*getProperties)(int, ncclNetProperties_t*), const char* netName, int coll, int keep, int virtualNics) {
   for (int n = startIndex; n < endIndex; n++) {
     ncclNetProperties_t props;
@@ -1201,6 +1210,7 @@ static ncclResult_t ncclTopoPopulateNics(ncclComm_t comm, ncclXml* xml, int star
       if (net == NULL) NCCLCHECK(ncclTopoGetVNicParent(xml, getProperties, &props.vProps, &parent));
     }
 
+    // dump_stack();
     NCCLCHECK(ncclTopoFillNet(xml, props.pciPath, props.name, &netNode, parent));
 
     const char* colAttr;
@@ -1215,6 +1225,13 @@ static ncclResult_t ncclTopoPopulateNics(ncclComm_t comm, ncclXml* xml, int star
     NCCLCHECK(xmlInitAttrUint64(netNode, "guid", props.guid));
     NCCLCHECK(xmlInitAttrInt(netNode, "maxconn", props.maxComms));
     bool gdrSupport = (props.ptrSupport & NCCL_PTR_CUDA) || (comm->dmaBufSupport && (props.ptrSupport & NCCL_PTR_DMABUF));
+    printf_ffl("NCCL GDR, Nic_Indirect_Access_GPU(nv_peer_support):%d, gpu_dma_buf_enable:%d, nic_name:%s, nic_support_dmabuf:%d\n",
+      props.ptrSupport, comm->dmaBufSupport, props.name, props.ptrSupport & NCCL_PTR_DMABUF);
+    if (props.ptrSupport & NCCL_PTR_CUDA)
+      printf_ffl("Nic support direct CUDA buffer support (typical GDR)\n");
+    if (props.ptrSupport & NCCL_PTR_DMABUF)
+      printf_ffl("Nic %s support dmabuf\n", props.name);
+
     INFO(NCCL_NET,"NET/%s : GPU Direct RDMA %s for HCA %d '%s'", netName, gdrSupport ? "Enabled" : "Disabled", n, props.name);
     NCCLCHECK(xmlInitAttrInt(netNode, "gdr", gdrSupport));
     // Only set coll if it's not 0
@@ -1334,6 +1351,7 @@ ncclResult_t ncclTopoGetSystem(struct ncclComm* comm, struct ncclTopoSystem** sy
       comm->ncclCollNet->getProperties, comm->ncclCollNet->makeVDevice, comm->ncclCollNet->devices, comm->ncclCollNet->name), ret, fail);
   }
   NCCLCHECKGOTO(ncclTopoGetSharedState(&state, comm->ncclNet->name, netStates), ret, fail);
+  printf_ffl("ncclTopoProcessNet, name:%s\n", comm->ncclNet->name);
   NCCLCHECKGOTO(ncclTopoProcessNet(comm, xml, 0, dumpXmlFile, state,
     comm->ncclNet->getProperties, comm->ncclNet->makeVDevice, comm->ncclNet->devices, comm->ncclNet->name), ret, fail);
   pthread_mutex_unlock(&netLock);

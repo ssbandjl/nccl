@@ -252,9 +252,11 @@ ncclResult_t ncclGpuGdrSupport(struct ncclComm* comm, int* gdrSupport) {
     CUDACHECK(cudaGetDevice(&cudaDev));
     CUDACHECK(cudaDeviceGetAttribute(&attr, cudaDevAttrGPUDirectRDMASupported, cudaDev));
     *gdrSupport = attr;
+    printf_ffl("Cuda check GPU gdr attr, gdrSupport(cudaDevAttrGPUDirectRDMASupported):%d\n", attr);
     return ncclSuccess;
   }
 #endif
+  printf_ffl("Chery GDR by reg mem\n");
   static int gdrSupportMatrix[32] = {
 	  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
@@ -297,6 +299,7 @@ ncclResult_t ncclGpuGdrSupport(struct ncclComm* comm, int* gdrSupport) {
 
     NCCLCHECKGOTO(ncclCudaMalloc(&gpuPtr, GPU_BUF_SIZE), ret, cleanup2);
     if (comm->ncclNet->regMr(sComm, gpuPtr, GPU_BUF_SIZE, NCCL_PTR_CUDA, &mHandle) == ncclSuccess) {
+      printf_ffl("RegMR\n");
       NCCLCHECK(comm->ncclNet->deregMr(sComm, mHandle));
       NCCLCHECK(comm->ncclNet->regMr(rComm, gpuPtr, GPU_BUF_SIZE, NCCL_PTR_CUDA, &mHandle));
       NCCLCHECK(comm->ncclNet->deregMr(rComm, mHandle));

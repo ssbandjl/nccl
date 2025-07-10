@@ -437,6 +437,7 @@ ncclResult_t ncclTopoCheckGdr(struct ncclTopoSystem* system, int rank, int64_t n
   }
 
   if (distance > netGdrLevel) {
+    printf_ffl("GPU Direct RDMA Disabled\n");
     INFO(NCCL_NET,"GPU Direct RDMA Disabled for GPU %d / HCA %lx (distance %d > %d)", rank, netId, distance, netGdrLevel);
     return ncclSuccess;
   }
@@ -791,6 +792,7 @@ static ncclResult_t ncclTopoGetNchannels(struct ncclComm* comm, int g /*local gp
        //allow upto channels requires to drive the NICs
        nNetChannels = std::max(netCountByBw, nChannelsMax);
     }
+    // printf_log("nNetChannels:%d\n", nNetChannels);
     *nChannels = nNetChannels;
   }
   return ncclSuccess;
@@ -828,6 +830,7 @@ ncclResult_t ncclTopoComputeP2pChannels(struct ncclComm* comm) {
   comm->p2pnChannels = std::min(comm->p2pnChannels, pow2Down(ncclDevMaxChannelsForArgsBytes(ncclParamWorkArgsBytes())));
   comm->p2pnChannelsPerPeer = std::min(comm->p2pnChannelsPerPeer, comm->p2pnChannels);
 
+  // printf_log("comm->p2pnChannels:%d, comm->p2pnChannelsPerPeer:%d\n", comm->p2pnChannels, comm->p2pnChannelsPerPeer);
   // Init channels that weren't used so far
   for (int c=comm->nChannels; c<comm->p2pnChannels; c++) NCCLCHECK(initChannel(comm, c));
 

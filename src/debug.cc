@@ -261,7 +261,7 @@ static void ncclDebugInit() {
  * Also exported to the dynamically loadable Net transport modules so
  * they can share the debugging mechanisms and output files
  */
-void ncclDebugLog(ncclDebugLogLevel level, unsigned long flags, const char *filefunc, int line, const char *fmt, ...) {
+void ncclDebugLog(ncclDebugLogLevel level, unsigned long flags, const char *filefunc, const char *file, int line, const char *fmt, ...) {
   if (__atomic_load_n(&ncclDebugLevel, __ATOMIC_ACQUIRE) == -1) ncclDebugInit();
   if (ncclDebugNoWarn != 0 && level == NCCL_LOG_WARN) { level = NCCL_LOG_INFO; flags = ncclDebugNoWarn; }
 
@@ -334,16 +334,16 @@ void ncclDebugLog(ncclDebugLogLevel level, unsigned long flags, const char *file
 
   // Add level specific formatting.
   if (level == NCCL_LOG_WARN) {
-    len += snprintf(buffer+len, sizeof(buffer)-len, "[%d] %s:%d NCCL WARN ", cudaDev, filefunc, line);
+    len += snprintf(buffer+len, sizeof(buffer)-len, "[%d] %s(), %s:%d NCCL WARN ", cudaDev, filefunc, file, line);
     if (ncclWarnSetDebugInfo) ncclDebugLevel = NCCL_LOG_INFO;
   } else if (level == NCCL_LOG_INFO) {
-    len += snprintf(buffer+len, sizeof(buffer)-len, "[%d] NCCL INFO ", cudaDev);
+    len += snprintf(buffer+len, sizeof(buffer)-len, "[%d] %s(), %s:%d NCCL INFO ", cudaDev, filefunc, file, line);
   } else if (level == NCCL_LOG_TRACE && flags == NCCL_CALL) {
-    len += snprintf(buffer+len, sizeof(buffer)-len, "NCCL CALL ");
+    len += snprintf(buffer+len, sizeof(buffer)-len, "[%d] %s(), %s:%d NCCL TRACE ", cudaDev, filefunc, file, line);
   } else if (level == NCCL_LOG_TRACE) {
     auto delta = std::chrono::steady_clock::now() - ncclEpoch;
     double timestamp = std::chrono::duration_cast<std::chrono::duration<double>>(delta).count()*1000;
-    len += snprintf(buffer+len, sizeof(buffer)-len, "[%d] %f %s:%d NCCL TRACE ", cudaDev, timestamp, filefunc, line);
+    len += snprintf(buffer+len, sizeof(buffer)-len, "[%d] %f %s(), %s:%d NCCL TRACE ", cudaDev, timestamp, filefunc, file, line);
   }
   len = std::min(len, sizeof(buffer)-1);  // prevent overflows
 

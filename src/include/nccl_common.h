@@ -36,7 +36,7 @@ typedef enum {
   NCCL_ALL = ~0
 } ncclDebugLogSubSys;
 
-typedef void (*ncclDebugLogger_t)(ncclDebugLogLevel level, unsigned long flags, const char *file, int line, const char *fmt, ...);
+typedef void (*ncclDebugLogger_t)(ncclDebugLogLevel level, unsigned long flags, const char *func, const char *file, int line, const char *fmt, ...);
 
 #define NCCL_NUM_FUNCTIONS 5 // Send/Recv not included for now
 typedef enum {

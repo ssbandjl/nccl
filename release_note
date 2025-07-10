@@ -1,0 +1,32 @@
+2.18.1-1
+
+Add support for IB SHARP to NVLS (NVLink SHARP algorithm).
+Add NVLS+Tree algorithm.
+Add support for memory management using cuMem* functions.
+Use all NICs for Send/Receive operations on systems with more than
+one NIC per GPU (#804).
+Add ncclCommSplit primitive, with resource sharing option in config.
+Fix alltoallv hang (#788)
+Increase number of channels on H100 when we're not limited by NVLink.
+Improve error reporting in case of IB failure, printing local and
+remote ID (#779).
+Add build option to allow compilation against RDMA includes instead
+of dynamically loading IB verbs symbols (#802).
+Fix context creation for progress thread (#803).
+NET/IB: add option to use multiple QPs in round-robin mode.
+Fix tree performance issue when NVB is disabled on HCM topologies.
+
+
+2.20.3-1
+
+Add support for alternating rings, allow for cross-nic rings without
+cross-rail communication.
+Add support for user buffer registration for network send/recv.
+Optimize aggregated operations to better utilize all channels.
+Add flattening for BCM PCI gen5 switches.
+Add support for inter-node NVLink communication
+Add support for port fusion in NET/IB.
+Add support for ReduceScatter and AllGather using Collnet.
+Update net API to v8.
+Fix hang during A2A connection.
+

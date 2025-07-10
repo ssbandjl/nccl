@@ -289,7 +289,10 @@ static ncclResult_t dmaBufSupported(struct ncclComm* comm) {
   CUCHECK(cuDeviceGet(&dev, comm->cudaDev));
   // Query device to see if DMA-BUF support is available
   (void) CUPFN(cuDeviceGetAttribute(&flag, CU_DEVICE_ATTRIBUTE_DMA_BUF_SUPPORTED, dev));
-  if (flag == 0) return ncclInternalError;
+  if (flag == 0) {
+    printf_ffl("gpu:%d, not support dmabuf(no CU_DEVICE_ATTRIBUTE_DMA_BUF_SUPPORTED attr)\n", comm->cudaDev);
+    return ncclInternalError;
+  }
   INFO(NCCL_INIT, "DMA-BUF is available on GPU device %d", comm->cudaDev);
   return ncclSuccess;
 #endif
@@ -714,6 +717,7 @@ static ncclResult_t initTransportsRank(struct ncclComm* comm, struct ncclComm* p
 
   timers[TIMER_INIT_ALLGATHER] = clockNano();
   // AllGather1 - begin
+  printf_ffl("AllGather1 - begin, ncclCalloc\n");
   NCCLCHECKGOTO(ncclCalloc(&comm->peerInfo, nranks+1), ret, fail); // Extra rank to represent CollNet root
   NCCLCHECKGOTO(fillInfo(comm, comm->peerInfo+rank, comm->commHash), ret, fail);
   NCCLCHECKGOTO(bootstrapAllGather(comm->bootstrap, comm->peerInfo, sizeof(struct ncclPeerInfo)), ret, fail);
@@ -804,6 +808,7 @@ static ncclResult_t initTransportsRank(struct ncclComm* comm, struct ncclComm* p
     NCCLCHECKGOTO(ncclTopoGetSystem(comm, NULL, dumpXmlFile), ret, fail);
   }
 
+  // printf_ffl("Detect TOPO, ncclTopoGetSystem\n");
   // Topo detection / System graph creation
   NCCLCHECKGOTO(ncclTopoGetSystem(comm, &comm->topo), ret, fail);
   // Compute paths between GPUs and NICs
@@ -1416,6 +1421,7 @@ static ncclResult_t ncclCommInitRankFunc(struct ncclAsyncJob* job_) {
   }
   comm->cudaArch = cudaArch;
 
+  printf_ffl("Init transport rank\n");
   NCCLCHECKGOTO(initTransportsRank(comm, job->parent, timers), res, fail);
   NCCLCHECKGOTO(ncclTunerPluginLoad(comm), res, fail);
   if (comm->tuner) {
