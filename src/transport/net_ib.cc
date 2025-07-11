@@ -1309,8 +1309,8 @@ ib_recv_dev_list:
   remoteNqps = ncclParamIbQpsPerConn() * remoteVProps.ndevs;
   comm->base.nqps = remoteNqps > localNqps ? remoteNqps : localNqps; // Select max nqps (local or remote)
 
-  // printf_log("localNqps:%d, remoteNqps:%d, rComm->base.nqps:%d, ncclParamIbQpsPerConn:%ld\n",
-  //   localNqps, remoteNqps, comm->base.nqps, ncclParamIbQpsPerConn());
+  printf_log("localNqps:%d, remoteNqps:%d, rComm->base.nqps:%d, ncclParamIbQpsPerConn:%ld\n",
+    localNqps, remoteNqps, comm->base.nqps, ncclParamIbQpsPerConn());
 
   // Init PD, Ctx for each IB device
   comm->ar = 1; // Set to 1 for logic
@@ -1605,8 +1605,8 @@ ib_recv_dev_list:
   localNqps  = ncclParamIbQpsPerConn() * rComm->base.vProps.ndevs; // We must have at least 1 qp per-device
   remoteNqps = ncclParamIbQpsPerConn() * remoteVProps.ndevs;
   rComm->base.nqps = remoteNqps > localNqps ? remoteNqps : localNqps; // Select max nqps (local or remote)
-  // printf_log("localNqps:%d, remoteNqps:%d, rComm->base.nqps:%d, ncclParamIbQpsPerConn:%ld\n",
-  //   localNqps, remoteNqps, rComm->base.nqps, ncclParamIbQpsPerConn());
+  printf_log("localNqps:%d, remoteNqps:%d, rComm->base.nqps:%d, ncclParamIbQpsPerConn:%ld, rComm->base.vProps.ndevs:%d\n",
+    localNqps, remoteNqps, rComm->base.nqps, ncclParamIbQpsPerConn(), rComm->base.vProps.ndevs);
 
   stage->offset = 0;
   stage->state = ncclIbCommStateSendDevList;
@@ -1677,6 +1677,7 @@ ib_recv:
   int remDevIndex;
   int devIndex;
   devIndex = 0;
+
   for (int q = 0; q < rComm->base.nqps; q++) {
     remDevIndex = remMeta.qpInfo[q].devIndex;
     remDevInfo = remMeta.devs + remDevIndex;
