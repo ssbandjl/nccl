@@ -12,7 +12,7 @@
 #   NVCC_GENCODE="-gencode=arch=compute_70,code=sm_70"
 
 # v100 no debug
-# make -j src.build \
+make -j src.build \
   BUILDDIR=/root/project/ai/nccl-tests/nccl/build \
   CXXFLAGS="-I/root/project/ai/nccl-tests/nccl/src/include -fPIC" \
   DEBUG=1 \
