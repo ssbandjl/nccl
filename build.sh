@@ -15,7 +15,6 @@
 make -j src.build \
   BUILDDIR=/root/project/ai/nccl-tests/nccl/build \
   CXXFLAGS="-I/root/project/ai/nccl-tests/nccl/src/include -fPIC" \
-  DEBUG=1 \
   CUDA_HOME=/usr/lib/cuda \
   NVCC_GENCODE="-gencode=arch=compute_70,code=sm_70"
 
