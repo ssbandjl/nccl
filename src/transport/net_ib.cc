@@ -1132,8 +1132,8 @@ ncclResult_t ncclIbCreateQp(uint8_t ib_port, struct ncclIbNetCommDevBase* base, 
   qpInitAttr.recv_cq = base->cq;
   qpInitAttr.qp_type = IBV_QPT_RC;
   // We might send 2 messages per send (RDMA and RDMA_WITH_IMM)
-  qpInitAttr.cap.max_send_wr = 2*MAX_REQUESTS;
-  qpInitAttr.cap.max_recv_wr = MAX_REQUESTS;
+  qpInitAttr.cap.max_send_wr = 2*MAX_REQUESTS; // 512
+  qpInitAttr.cap.max_recv_wr = MAX_REQUESTS; //256
   qpInitAttr.cap.max_send_sge = 1;
   qpInitAttr.cap.max_recv_sge = 1;
   qpInitAttr.cap.max_inline_data = ncclParamIbUseInline() ? sizeof(struct ncclIbSendFifo) : 0;
@@ -2274,6 +2274,7 @@ ncclResult_t ncclIbIrecv(void* recvComm, int n, void** data, size_t* sizes, int*
   TIME_START(1);
   // Select either all QPs, or one qp per-device
   const int nqps = ncclParamIbSplitDataOnQps() ? comm->base.nqps : comm->base.nDataQps;
+  printf_ffl("Post Recv nqps:%d\n", nqps);
 
   // Post recvs
   struct ibv_recv_wr* bad_wr;
