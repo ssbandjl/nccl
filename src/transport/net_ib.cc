@@ -2274,7 +2274,7 @@ ncclResult_t ncclIbIrecv(void* recvComm, int n, void** data, size_t* sizes, int*
   TIME_START(1);
   // Select either all QPs, or one qp per-device
   const int nqps = ncclParamIbSplitDataOnQps() ? comm->base.nqps : comm->base.nDataQps;
-  printf_ffl("Post Recv nqps:%d\n", nqps);
+  // printf_ffl("Post Recv nqps:%d\n", nqps);
 
   // Post recvs
   struct ibv_recv_wr* bad_wr;
