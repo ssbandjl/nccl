@@ -1148,11 +1148,11 @@ ncclResult_t ncclIbCreateQp(uint8_t ib_port, struct ncclIbNetCommDevBase* base, 
   qpAttr.qp_access_flags = access_flags;
   // qpAttr.qp_access_flags = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_MW_BIND | IBV_ACCESS_REMOTE_ATOMIC;
   NCCLCHECK(wrap_ibv_modify_qp(qp->qp, &qpAttr, IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS));
-  INFO(NCCL_NET, "NET/IB : ncclIbCreateQp port=%d dev=%d devName=%s ndevs=%d nmdevs=%d qpn=%u pkey=%u pd=%p, access_flags:0x%x",
+  INFO(NCCL_NET, "NET/IB : port=%d dev=%d devName=%s ndevs=%d nmdevs=%d qpn=%u pkey=%u pd=%p, access_flags:0x%x",
     ib_port, base->ibDevN, ncclIbDevs[base->ibDevN].devName, ncclNIbDevs, ncclNMergedIbDevs, qp->qp->qp_num, qpAttr.pkey_index, base->pd, access_flags);
 
-  printf_ffl("NET/IB : ncclIbCreateQp port=%d dev=%d devName=%s ndevs=%d nmdevs=%d qpn=%u pkey=%u pd=%p, access_flags:0x%x, max_send_wr:%d, max_recv_wr:%d\n",
-    ib_port, base->ibDevN, ncclIbDevs[base->ibDevN].devName, ncclNIbDevs, ncclNMergedIbDevs, qp->qp->qp_num, qpAttr.pkey_index, base->pd, access_flags, qpInitAttr.cap.max_send_wr, qpInitAttr.cap.max_recv_wr);
+  // printf_ffl("NET/IB : ncclIbCreateQp port=%d dev=%d devName=%s ndevs=%d nmdevs=%d qpn=%u pkey=%u pd=%p, access_flags:0x%x, max_send_wr:%d, max_recv_wr:%d\n",
+  //   ib_port, base->ibDevN, ncclIbDevs[base->ibDevN].devName, ncclNIbDevs, ncclNMergedIbDevs, qp->qp->qp_num, qpAttr.pkey_index, base->pd, access_flags, qpInitAttr.cap.max_send_wr, qpInitAttr.cap.max_recv_wr);
   return ncclSuccess;
 }
 
@@ -2066,6 +2066,7 @@ ncclResult_t ncclIbMultiSend(struct ncclIbSendComm* comm, int slot, void* pHandl
     }
 #endif
     NCCLCHECK(wrap_ibv_post_send(qp->qp, comm->wrs, &bad_wr));
+    // dump_stack();
 
     for (int r=0; r<nreqs; r++) {
       int chunkSize = DIVUP(DIVUP(reqs[r]->send.size, nqps), align) * align;
@@ -2240,6 +2241,7 @@ ncclResult_t ncclIbPostFifo(struct ncclIbRecvComm* comm, int n, void** data, siz
 
   struct ibv_send_wr* bad_wr;
   NCCLCHECK(wrap_ibv_post_send(ctsQp->qp, &wr, &bad_wr));
+  // dump_stack();
   comm->remFifo.fifoTail++;
 
   return ncclSuccess;
@@ -2275,6 +2277,7 @@ ncclResult_t ncclIbIrecv(void* recvComm, int n, void** data, size_t* sizes, int*
   // Select either all QPs, or one qp per-device
   const int nqps = ncclParamIbSplitDataOnQps() ? comm->base.nqps : comm->base.nDataQps;
   // printf_ffl("Post Recv nqps:%d\n", nqps);
+  // dump_stack();
 
   // Post recvs
   struct ibv_recv_wr* bad_wr;
@@ -2295,6 +2298,8 @@ ncclResult_t ncclIbIrecv(void* recvComm, int n, void** data, size_t* sizes, int*
     }
 #endif
     NCCLCHECK(wrap_ibv_post_recv(qp->qp, &wr, &bad_wr));
+    // printf_ffl("Post Recv, qp:%d\n", qp->qp->qp_num);
+    // dump_stack();
     comm->base.qpIndex = (comm->base.qpIndex+1)%comm->base.nqps;
   }
 
@@ -2338,6 +2343,7 @@ ncclResult_t ncclIbIflush(void* recvComm, int n, void** data, int* sizes, void**
     TIME_START(4);
     struct ibv_send_wr* bad_wr;
     NCCLCHECK(wrap_ibv_post_send(comm->devs[i].gpuFlush.qp.qp, &wr, &bad_wr));
+    // dump_stack();
     TIME_STOP(4);
 
     ncclIbAddEvent(req, i, &comm->devs[i].base);
@@ -2399,6 +2405,10 @@ ncclResult_t ncclIbTest(void* request, int* done, int* sizes) {
       // If we expect any completions from this device's CQ
       if (r->events[i]) {
         NCCLCHECK(wrap_ibv_poll_cq(r->devBases[i]->cq, 4, wcs, &wrDone));
+        if (wrDone > 0) {
+          // printf_ffl("Poll success, %d cqe\n", wrDone);
+          // dump_stack();
+        }
         totalWrDone += wrDone;
         if (wrDone == 0) { TIME_CANCEL(3); } else { TIME_STOP(3); }
         if (wrDone == 0) continue;

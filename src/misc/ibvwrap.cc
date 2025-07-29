@@ -204,7 +204,7 @@ ncclResult_t wrap_ibv_destroy_cq(struct ibv_cq *cq) {
 }
 
 ncclResult_t wrap_ibv_destroy_qp(struct ibv_qp *qp) {
-  // printf_log("Destroy QP(%d)\n", qp->qp_num);
+  printf_log("Destroy QP(%d)\n", qp->qp_num);
   IBV_INT_CHECK_RET_ERRNO(ibvSymbols, ibv_internal_destroy_qp, ibv_internal_destroy_qp(qp), 0, "ibv_destroy_qp");
 }
 
